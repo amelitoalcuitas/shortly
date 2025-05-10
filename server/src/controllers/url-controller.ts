@@ -40,6 +40,14 @@ export async function createUrl(req: Request, res: Response) {
     return res.status(201).json({ url: shortenedUrl });
   } catch (error) {
     console.error("Error creating shortened URL:", error);
+
+    // Check if this is a custom code already exists error
+    if (error instanceof Error && error.message.includes("already exists")) {
+      return res.status(409).json({
+        error: error.message,
+      });
+    }
+
     return res.status(500).json({
       error: "Failed to create shortened URL",
     });
