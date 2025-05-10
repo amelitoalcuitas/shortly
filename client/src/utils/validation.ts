@@ -2,11 +2,7 @@
  * Utility functions and constants for validation
  */
 
-/**
- * URL validation regex pattern
- * This pattern checks for a valid URL format with protocol (http/https)
- */
-export const URL_REGEX = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/;
+import isUrl from "validator/lib/isURL";
 
 /**
  * Function to validate URL
@@ -14,7 +10,7 @@ export const URL_REGEX = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[
  * @returns boolean indicating if URL is valid
  */
 export const isValidUrl = (url: string): boolean => {
-  return URL_REGEX.test(url);
+  return isUrl(url);
 };
 
 /**

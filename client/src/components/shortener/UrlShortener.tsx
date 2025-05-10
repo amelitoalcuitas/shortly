@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Copy, SpinnerGap, Warning, X } from "@phosphor-icons/react";
 import { urlService } from "../../services";
 import { AxiosError } from "axios";
-import { isValidUrl, normalizeUrl } from "../../utils";
+import { isValidUrl, normalizeUrl } from "../../utils/validation";
 
 interface UrlShortenerProps {
   userId?: string;
@@ -47,7 +47,7 @@ const UrlShortener = ({
     }
   };
 
-  // Custom code validation regex - only allows alphanumeric characters, dashes, and underscores
+  // Custom code validation regex - only allows alphanumeric characters
   const CUSTOM_CODE_REGEX = /^[a-zA-Z0-9]*$/;
 
   // Validate custom code
