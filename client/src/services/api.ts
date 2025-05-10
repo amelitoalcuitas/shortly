@@ -17,12 +17,14 @@ const createApiClient = (): AxiosInstance => {
     headers: {
       "Content-Type": "application/json",
     },
+    withCredentials: true, // Include cookies in requests
   });
 
   // Request interceptor
   client.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-      // You can add auth token here if needed in the future
+      // No need to manually add auth token as it's in the HttpOnly cookie
+      // and will be sent automatically with withCredentials: true
       return config;
     },
     (error: AxiosError) => {

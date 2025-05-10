@@ -1,15 +1,23 @@
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 dotenv.config();
 
 const app = express();
 import { db } from "./db/knex";
 import urlRoutes from "./routes/url-routes";
+import authRoutes from "./routes/auth-routes";
 
 //middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    credentials: true, // Allow cookies to be sent with requests
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 
 /*
 ##################################################
@@ -44,6 +52,9 @@ app.post("/examples", async (req, res) => {
 
 // URL shortening routes
 app.use("/api/urls", urlRoutes);
+
+// User authentication routes
+app.use("/api/auth", authRoutes);
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {

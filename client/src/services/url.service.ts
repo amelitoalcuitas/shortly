@@ -96,8 +96,16 @@ class UrlService {
    * @returns Full URL string
    */
   getFullShortenedUrl(shortCode: string): string {
-    // This could be configured from environment variables in a real app
-    return `shortly.io/${shortCode}`;
+    // Uses the base URL from environment variables
+    return `${this.getBaseUrl()}/${shortCode}`;
+  }
+
+  /**
+   * Get the base URL for the shortened URLs
+   * @returns Base URL string from environment variables
+   */
+  getBaseUrl(): string {
+    return import.meta.env.VITE_BASE_URL || "shortly.io";
   }
 }
 
