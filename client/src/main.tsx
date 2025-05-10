@@ -7,6 +7,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import RedirectPage from "./pages/RedirectPage";
 import { AuthProvider } from "./contexts/AuthContext.tsx";
 
 createRoot(document.getElementById("root")!).render(
@@ -19,6 +20,8 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* Route for handling shortened URLs */}
+          <Route path="/:code" element={<RedirectPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -172,7 +172,7 @@ const UrlShortener = ({
             value={url}
             onChange={handleUrlChange}
             placeholder="https://example.com/very/long/url/that/needs/shortening"
-            className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+            className={`w-full p-3 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
               error ? "border-red-500" : "border-gray-300"
             }`}
           />

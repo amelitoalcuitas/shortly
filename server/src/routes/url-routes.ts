@@ -6,6 +6,7 @@ import {
   getAllUrls,
   getUrlsByUser,
   deleteUrl,
+  incrementUrlClickCount,
 } from "../controllers/url-controller";
 
 const router = express.Router();
@@ -33,6 +34,11 @@ router.get("/", (req, res) => {
 // Get shortened URLs by user ID
 router.get("/user/:user_id", (req, res) => {
   getUrlsByUser(req, res);
+});
+
+// Increment the click count for a shortened URL
+router.post("/increment/:code", (req, res) => {
+  incrementUrlClickCount(req, res);
 });
 
 // Delete a shortened URL

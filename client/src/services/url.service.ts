@@ -105,7 +105,16 @@ class UrlService {
    * @returns Base URL string from environment variables
    */
   getBaseUrl(): string {
-    return import.meta.env.VITE_BASE_URL || "shortly.io";
+    return import.meta.env.VITE_BASE_URL || "http://localhost:3000";
+  }
+
+  /**
+   * Get the redirect URL for a short code
+   * @param shortCode The short code
+   * @returns The redirect URL
+   */
+  getRedirectUrl(shortCode: string): string {
+    return `${this.getBaseUrl()}/${shortCode}`;
   }
 }
 
