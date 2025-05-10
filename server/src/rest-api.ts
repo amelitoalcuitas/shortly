@@ -5,6 +5,7 @@ dotenv.config();
 
 const app = express();
 import { db } from "./db/knex";
+import urlRoutes from "./routes/url-routes";
 
 //middleware
 app.use(cors());
@@ -40,6 +41,9 @@ app.post("/examples", async (req, res) => {
     .returning("*");
   res.json({ doc });
 });
+
+// URL shortening routes
+app.use("/api/urls", urlRoutes);
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
