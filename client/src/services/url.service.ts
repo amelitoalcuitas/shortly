@@ -4,6 +4,8 @@ import {
   ShortenedUrl,
   UrlResponse,
   UrlsResponse,
+  PaginatedUrlsResponse,
+  Pagination,
 } from "../types";
 
 /**
@@ -46,6 +48,7 @@ class UrlService {
 
   /**
    * Get all URLs for a specific user
+   * @deprecated Use getUrlsByUserPaginated instead
    * @param userId User ID to look up
    * @returns Promise with array of URLs
    */
@@ -57,6 +60,43 @@ class UrlService {
       return response.data.urls;
     } catch (error) {
       console.error("Error getting user URLs:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get paginated URLs for a specific user with optional search
+   * @param userId User ID to look up
+   * @param page Page number (1-based)
+   * @param pageSize Number of items per page
+   * @param search Optional search term to filter URLs
+   * @returns Promise with paginated URLs and pagination info
+   */
+  async getUrlsByUserPaginated(
+    userId: string,
+    page: number = 1,
+    pageSize: number = 10,
+    search?: string
+  ): Promise<{ urls: ShortenedUrl[]; pagination: Pagination }> {
+    try {
+      // Build the query parameters
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("pageSize", pageSize.toString());
+      if (search) {
+        params.append("search", search);
+      }
+
+      const response = await apiClient.get<PaginatedUrlsResponse>(
+        `${this.baseUrl}/user/${userId}?${params.toString()}`
+      );
+
+      return {
+        urls: response.data.urls,
+        pagination: response.data.pagination,
+      };
+    } catch (error) {
+      console.error("Error getting paginated user URLs:", error);
       throw error;
     }
   }
@@ -134,6 +174,7 @@ class UrlService {
 
   /**
    * Get all URLs for a user with their click counts
+   * @deprecated Use getUrlsWithClickCountsPaginated instead
    * @param userId User ID to look up
    * @returns Promise with array of URLs including click counts
    */
@@ -148,6 +189,47 @@ class UrlService {
       return response.data.urls;
     } catch (error) {
       console.error("Error fetching URLs with click counts:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get paginated URLs for a user with their click counts and optional search
+   * @param userId User ID to look up
+   * @param page Page number (1-based)
+   * @param pageSize Number of items per page
+   * @param search Optional search term to filter URLs
+   * @returns Promise with paginated URLs including click counts and pagination info
+   */
+  async getUrlsWithClickCountsPaginated(
+    userId: string,
+    page: number = 1,
+    pageSize: number = 10,
+    search?: string
+  ): Promise<{
+    urls: Array<ShortenedUrl & { clickCount: number }>;
+    pagination: Pagination;
+  }> {
+    try {
+      // Build the query parameters
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("pageSize", pageSize.toString());
+      if (search) {
+        params.append("search", search);
+      }
+
+      const response = await apiClient.get<{
+        urls: Array<ShortenedUrl & { clickCount: number }>;
+        pagination: Pagination;
+      }>(`${this.baseUrl}/user/${userId}/with-clicks?${params.toString()}`);
+
+      return {
+        urls: response.data.urls,
+        pagination: response.data.pagination,
+      };
+    } catch (error) {
+      console.error("Error fetching paginated URLs with click counts:", error);
       throw error;
     }
   }

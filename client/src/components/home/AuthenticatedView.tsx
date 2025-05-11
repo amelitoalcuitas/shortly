@@ -9,10 +9,12 @@ import {
   ChartLine,
   CaretDown,
   CaretUp,
+  CaretLeft,
+  CaretRight,
 } from "@phosphor-icons/react";
 import { urlService } from "../../services";
 import { useAuth } from "../../hooks/useAuth";
-import { ShortenedUrl } from "../../types";
+import { ShortenedUrl, Pagination } from "../../types";
 import UrlShortener from "../shortener/UrlShortener";
 import UrlAnalyticsChart from "../analytics/UrlAnalyticsChart";
 
@@ -29,6 +31,14 @@ const AuthenticatedView = () => {
   const [deletingUrlId, setDeletingUrlId] = useState<string | null>(null);
   const [expandedUrlId, setExpandedUrlId] = useState<string | null>(null);
 
+  // Pagination state
+  const [pagination, setPagination] = useState<Pagination>({
+    total: 0,
+    page: 1,
+    pageSize: 10,
+    totalPages: 0,
+  });
+
   // Reset the copied state after 2 seconds
   useEffect(() => {
     if (copiedUrlId) {
@@ -39,21 +49,30 @@ const AuthenticatedView = () => {
     }
   }, [copiedUrlId]);
 
-  // Fetch user's URLs and their click counts
-  const fetchUserUrls = useCallback(async () => {
-    if (!user) return;
+  // Fetch user's URLs and their click counts with pagination
+  const fetchUserUrls = useCallback(
+    async (page = pagination.page) => {
+      if (!user) return;
 
-    setIsLoadingUrls(true);
-    try {
-      // Use the service method that fetches URLs with click counts
-      const urlsWithClicks = await urlService.getUrlsWithClickCounts(user.id);
-      setUserUrls(urlsWithClicks);
-    } catch (error) {
-      console.error("Error fetching user URLs:", error);
-    } finally {
-      setIsLoadingUrls(false);
-    }
-  }, [user]);
+      setIsLoadingUrls(true);
+      try {
+        // Use the paginated service method that fetches URLs with click counts
+        const result = await urlService.getUrlsWithClickCountsPaginated(
+          user.id,
+          page,
+          pagination.pageSize
+        );
+
+        setUserUrls(result.urls);
+        setPagination(result.pagination);
+      } catch (error) {
+        console.error("Error fetching user URLs:", error);
+      } finally {
+        setIsLoadingUrls(false);
+      }
+    },
+    [user, pagination.page, pagination.pageSize]
+  );
 
   // Load user's URLs on component mount
   useEffect(() => {
@@ -179,6 +198,12 @@ const AuthenticatedView = () => {
     setExpandedUrlId((prevId) => (prevId === urlId ? null : urlId));
   };
 
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > pagination.totalPages) return;
+    fetchUserUrls(newPage);
+  };
+
   return (
     <div className="flex-grow flex flex-col items-center p-4">
       <div className="max-w-4xl w-full">
@@ -194,15 +219,17 @@ const AuthenticatedView = () => {
         <UrlShortener
           userId={user?.id}
           customCodeEnabled={true}
-          onUrlShortened={fetchUserUrls}
+          onUrlShortened={() => fetchUserUrls(1)}
           className="mb-6"
         />
 
         {/* User's URLs */}
         <div className="bg-white rounded-lg p-6 border border-gray-200">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">
-            your shortlies
-          </h2>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-gray-800">
+              your shortlies
+            </h2>
+          </div>
 
           {isLoadingUrls ? (
             <div className="flex justify-center py-8">
@@ -323,6 +350,84 @@ const AuthenticatedView = () => {
                   )}
                 </div>
               ))}
+
+              {/* Pagination controls */}
+              {pagination.totalPages > 1 && (
+                <div className="flex justify-center items-center mt-6 space-x-2">
+                  <button
+                    onClick={() => handlePageChange(pagination.page - 1)}
+                    disabled={pagination.page === 1}
+                    className={`p-2 rounded-md ${
+                      pagination.page === 1
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    aria-label="Previous page"
+                  >
+                    <CaretLeft className="w-5 h-5" />
+                  </button>
+
+                  <div className="flex space-x-1">
+                    {Array.from(
+                      { length: pagination.totalPages },
+                      (_, i) => i + 1
+                    )
+                      .filter((page) => {
+                        // Show first page, last page, current page, and pages around current page
+                        return (
+                          page === 1 ||
+                          page === pagination.totalPages ||
+                          Math.abs(page - pagination.page) <= 1
+                        );
+                      })
+                      .map((page, index, array) => {
+                        // Add ellipsis between non-consecutive pages
+                        const showEllipsisBefore =
+                          index > 0 && array[index - 1] !== page - 1;
+
+                        return (
+                          <div key={page} className="flex items-center">
+                            {showEllipsisBefore && (
+                              <span className="px-3 py-1 text-gray-500">
+                                ...
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handlePageChange(page)}
+                              className={`w-8 h-8 flex items-center justify-center rounded-md ${
+                                pagination.page === page
+                                  ? "bg-primary text-white"
+                                  : "text-gray-700 hover:bg-gray-100"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  <button
+                    onClick={() => handlePageChange(pagination.page + 1)}
+                    disabled={pagination.page === pagination.totalPages}
+                    className={`p-2 rounded-md ${
+                      pagination.page === pagination.totalPages
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    aria-label="Next page"
+                  >
+                    <CaretRight className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Show total count when there are URLs */}
+          {!isLoadingUrls && userUrls.length > 0 && (
+            <div className="text-sm text-gray-500 mt-4 text-center">
+              Showing {userUrls.length} of {pagination.total} URLs
             </div>
           )}
         </div>

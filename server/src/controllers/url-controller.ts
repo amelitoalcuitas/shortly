@@ -4,12 +4,14 @@ import {
   getShortenedUrlByCode,
   getAllShortenedUrls,
   getShortenedUrlsByUser,
+  getShortenedUrlsByUserPaginated,
   logUrlClick,
   getUrlClickCount,
   getUrlClickCountByCode,
   deleteShortenedUrl,
   isUrlExpired,
   getShortenedUrlsWithClickCounts,
+  getShortenedUrlsWithClickCountsPaginated,
   getDailyClickCounts,
 } from "../models/shortened-url";
 
@@ -321,13 +323,46 @@ export async function getAllUrls(_req: Request, res: Response) {
 }
 
 /**
- * Get shortened URLs by user ID
+ * Get shortened URLs by user ID with pagination and search
  */
 export async function getUrlsByUser(req: Request, res: Response) {
   try {
     const { user_id } = req.params;
-    const urls = await getShortenedUrlsByUser(user_id);
-    return res.json({ urls });
+    const page = req.query.page ? parseInt(req.query.page as string) : 1;
+    const pageSize = req.query.pageSize
+      ? parseInt(req.query.pageSize as string)
+      : 10;
+    const search = req.query.search as string | undefined;
+
+    // Validate pagination parameters
+    if (isNaN(page) || page < 1) {
+      return res.status(400).json({
+        error: "Page must be a positive number",
+      });
+    }
+
+    if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
+      return res.status(400).json({
+        error: "Page size must be between 1 and 100",
+      });
+    }
+
+    const result = await getShortenedUrlsByUserPaginated(
+      user_id,
+      page,
+      pageSize,
+      search
+    );
+
+    return res.json({
+      urls: result.data,
+      pagination: {
+        total: result.total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(result.total / pageSize),
+      },
+    });
   } catch (error) {
     console.error("Error fetching shortened URLs by user:", error);
     return res.status(500).json({
@@ -423,13 +458,46 @@ export async function deleteUrl(req: Request, res: Response) {
 }
 
 /**
- * Get shortened URLs by user ID with click counts in a single query
+ * Get shortened URLs by user ID with click counts in a single query, with pagination and search
  */
 export async function getUrlsWithClickCounts(req: Request, res: Response) {
   try {
     const { user_id } = req.params;
-    const urls = await getShortenedUrlsWithClickCounts(user_id);
-    return res.json({ urls });
+    const page = req.query.page ? parseInt(req.query.page as string) : 1;
+    const pageSize = req.query.pageSize
+      ? parseInt(req.query.pageSize as string)
+      : 10;
+    const search = req.query.search as string | undefined;
+
+    // Validate pagination parameters
+    if (isNaN(page) || page < 1) {
+      return res.status(400).json({
+        error: "Page must be a positive number",
+      });
+    }
+
+    if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
+      return res.status(400).json({
+        error: "Page size must be between 1 and 100",
+      });
+    }
+
+    const result = await getShortenedUrlsWithClickCountsPaginated(
+      user_id,
+      page,
+      pageSize,
+      search
+    );
+
+    return res.json({
+      urls: result.data,
+      pagination: {
+        total: result.total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(result.total / pageSize),
+      },
+    });
   } catch (error) {
     console.error("Error fetching shortened URLs with click counts:", error);
     return res.status(500).json({

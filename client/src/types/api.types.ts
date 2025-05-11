@@ -59,6 +59,24 @@ export interface UrlsResponse {
 }
 
 /**
+ * Pagination information
+ */
+export interface Pagination {
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/**
+ * URL service response for paginated URLs
+ */
+export interface PaginatedUrlsResponse {
+  urls: ShortenedUrl[];
+  pagination: Pagination;
+}
+
+/**
  * Error response from the API
  */
 export interface ApiErrorResponse {

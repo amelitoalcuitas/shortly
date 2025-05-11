@@ -118,11 +118,57 @@ export async function getAllShortenedUrls(): Promise<ShortenedUrl[]> {
 
 /**
  * Get shortened URLs by user ID
+ * @deprecated Use getShortenedUrlsByUserPaginated instead
  */
 export async function getShortenedUrlsByUser(
   user_id: string
 ): Promise<ShortenedUrl[]> {
   return db(TABLE_NAME).where({ user_id }).orderBy("createdAt", "desc");
+}
+
+/**
+ * Get shortened URLs by user ID with pagination and search
+ * @param user_id User ID to look up
+ * @param page Page number (1-based)
+ * @param pageSize Number of items per page
+ * @param search Optional search term to filter URLs
+ * @returns Promise with paginated URLs and total count
+ */
+export async function getShortenedUrlsByUserPaginated(
+  user_id: string,
+  page: number = 1,
+  pageSize: number = 10,
+  search?: string
+): Promise<{ data: ShortenedUrl[]; total: number }> {
+  const offset = (page - 1) * pageSize;
+
+  // Build the base query
+  let query = db(TABLE_NAME).where({ user_id });
+
+  // Add search functionality if a search term is provided
+  if (search && search.trim()) {
+    const searchTerm = `%${search.trim()}%`;
+    query = query.andWhere(function () {
+      this.where("original_url", "ILIKE", searchTerm).orWhere(
+        "short_code",
+        "ILIKE",
+        searchTerm
+      );
+    });
+  }
+
+  // Get total count with the same filters
+  const [countResult] = await query.clone().count("id as count");
+  const total = parseInt(countResult.count as string);
+
+  // Get the paginated data
+  const data = await query
+    .select("*")
+    .orderBy("createdAt", "desc")
+    .limit(pageSize)
+    .offset(offset);
+
+  return { data, total };
 }
 
 /**
@@ -213,6 +259,7 @@ export async function getAllShortenedUrlsPaginated(
 
 /**
  * Get shortened URLs by user ID with click counts in a single query
+ * @deprecated Use getShortenedUrlsWithClickCountsPaginated instead
  * @param user_id User ID to look up
  * @returns Promise with array of URLs including click counts
  */
@@ -234,6 +281,65 @@ export async function getShortenedUrlsWithClickCounts(
     ...result,
     clickCount: parseInt(result.clickCount as string) || 0,
   }));
+}
+
+/**
+ * Get shortened URLs by user ID with click counts in a single query, with pagination and search
+ * @param user_id User ID to look up
+ * @param page Page number (1-based)
+ * @param pageSize Number of items per page
+ * @param search Optional search term to filter URLs
+ * @returns Promise with paginated URLs including click counts and total count
+ */
+export async function getShortenedUrlsWithClickCountsPaginated(
+  user_id: string,
+  page: number = 1,
+  pageSize: number = 10,
+  search?: string
+): Promise<{
+  data: Array<ShortenedUrl & { clickCount: number }>;
+  total: number;
+}> {
+  const offset = (page - 1) * pageSize;
+
+  // Build the base query
+  let baseQuery = db(TABLE_NAME).where({ [`${TABLE_NAME}.user_id`]: user_id });
+
+  // Add search functionality if a search term is provided
+  if (search && search.trim()) {
+    const searchTerm = `%${search.trim()}%`;
+    baseQuery = baseQuery.andWhere(function () {
+      this.where(`${TABLE_NAME}.original_url`, "ILIKE", searchTerm).orWhere(
+        `${TABLE_NAME}.short_code`,
+        "ILIKE",
+        searchTerm
+      );
+    });
+  }
+
+  // Get total count with the same filters
+  const countQuery = baseQuery.clone();
+  const [countResult] = await countQuery.count(`${TABLE_NAME}.id as count`);
+  const total = parseInt(countResult.count as string);
+
+  // Get the paginated data with click counts
+  const results = await baseQuery
+    .select([
+      `${TABLE_NAME}.*`,
+      db.raw('COALESCE(COUNT("url_clicks"."id"), 0) as "clickCount"'),
+    ])
+    .leftJoin("url_clicks", `${TABLE_NAME}.id`, "url_clicks.shortened_url_id")
+    .groupBy(`${TABLE_NAME}.id`)
+    .orderBy(`${TABLE_NAME}.createdAt`, "desc")
+    .limit(pageSize)
+    .offset(offset);
+
+  const data = results.map((result) => ({
+    ...result,
+    clickCount: parseInt(result.clickCount as string) || 0,
+  }));
+
+  return { data, total };
 }
 
 /**
