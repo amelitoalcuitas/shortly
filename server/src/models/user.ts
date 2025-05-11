@@ -102,7 +102,9 @@ export async function validatePassword(
 /**
  * Generate a password reset token for a user
  */
-export async function generateResetToken(email: string): Promise<string | null> {
+export async function generateResetToken(
+  email: string
+): Promise<string | null> {
   const user = await getUserByEmail(email);
   if (!user) {
     return null;
@@ -110,7 +112,7 @@ export async function generateResetToken(email: string): Promise<string | null> 
 
   // Generate a random token
   const resetToken = crypto.randomBytes(32).toString("hex");
-  
+
   // Set token expiry (24 hours from now)
   const resetTokenExpiry = new Date();
   resetTokenExpiry.setHours(
@@ -134,7 +136,7 @@ export async function validateResetToken(
   token: string
 ): Promise<User | null> {
   const user = await getUserByEmail(email);
-  
+
   if (
     !user ||
     !user.reset_token ||
@@ -157,7 +159,7 @@ export async function resetPassword(
   newPassword: string
 ): Promise<boolean> {
   const user = await validateResetToken(email, token);
-  
+
   if (!user) {
     return false;
   }

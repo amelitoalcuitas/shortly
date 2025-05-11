@@ -9,6 +9,7 @@ import {
   getUrlClickCountByCode,
   deleteShortenedUrl,
   isUrlExpired,
+  getShortenedUrlsWithClickCounts,
 } from "../models/shortened-url";
 
 /**
@@ -416,6 +417,22 @@ export async function deleteUrl(req: Request, res: Response) {
     console.error("Error deleting shortened URL:", error);
     return res.status(500).json({
       error: "Failed to delete shortened URL",
+    });
+  }
+}
+
+/**
+ * Get shortened URLs by user ID with click counts in a single query
+ */
+export async function getUrlsWithClickCounts(req: Request, res: Response) {
+  try {
+    const { user_id } = req.params;
+    const urls = await getShortenedUrlsWithClickCounts(user_id);
+    return res.json({ urls });
+  } catch (error) {
+    console.error("Error fetching shortened URLs with click counts:", error);
+    return res.status(500).json({
+      error: "Failed to fetch shortened URLs with click counts",
     });
   }
 }

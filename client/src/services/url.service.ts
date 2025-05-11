@@ -141,33 +141,11 @@ class UrlService {
     userId: string
   ): Promise<Array<ShortenedUrl & { clickCount: number }>> {
     try {
-      // Get the user's URLs
-      const urls = await this.getUrlsByUser(userId);
-
-      // For each URL, get the click count using the dedicated endpoint
-      const urlsWithClicks = await Promise.all(
-        urls.map(async (url) => {
-          try {
-            // Use the method that doesn't increment the click count
-            const clickCount = await this.getUrlClickCount(url.short_code);
-            return {
-              ...url,
-              clickCount,
-            };
-          } catch (error) {
-            console.error(
-              `Error getting click count for ${url.short_code}:`,
-              error
-            );
-            return {
-              ...url,
-              clickCount: 0,
-            };
-          }
-        })
-      );
-
-      return urlsWithClicks;
+      // Use the optimized endpoint that returns URLs with click counts in a single query
+      const response = await apiClient.get<{
+        urls: Array<ShortenedUrl & { clickCount: number }>;
+      }>(`${this.baseUrl}/user/${userId}/with-clicks`);
+      return response.data.urls;
     } catch (error) {
       console.error("Error fetching URLs with click counts:", error);
       throw error;

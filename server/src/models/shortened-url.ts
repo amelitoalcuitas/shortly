@@ -210,3 +210,28 @@ export async function getAllShortenedUrlsPaginated(
 
   return { data, total };
 }
+
+/**
+ * Get shortened URLs by user ID with click counts in a single query
+ * @param user_id User ID to look up
+ * @returns Promise with array of URLs including click counts
+ */
+export async function getShortenedUrlsWithClickCounts(
+  user_id: string
+): Promise<Array<ShortenedUrl & { clickCount: number }>> {
+  // Use a left join to include URLs that have no clicks
+  const results = await db(TABLE_NAME)
+    .select([
+      `${TABLE_NAME}.*`,
+      db.raw('COALESCE(COUNT("url_clicks"."id"), 0) as "clickCount"'),
+    ])
+    .leftJoin("url_clicks", `${TABLE_NAME}.id`, "url_clicks.shortened_url_id")
+    .where({ [`${TABLE_NAME}.user_id`]: user_id })
+    .groupBy(`${TABLE_NAME}.id`)
+    .orderBy(`${TABLE_NAME}.createdAt`, "desc");
+
+  return results.map((result) => ({
+    ...result,
+    clickCount: parseInt(result.clickCount as string) || 0,
+  }));
+}

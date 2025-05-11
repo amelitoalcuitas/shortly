@@ -218,16 +218,7 @@ const AuthenticatedView = () => {
                 >
                   <div className="p-3 flex items-center justify-between bg-gray-50">
                     <div className="text-primary font-medium truncate mr-2">
-                      <a
-                        href={urlService.getFullShortenedUrl(
-                          urlItem.short_code
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        {urlService.getFullShortenedUrl(urlItem.short_code)}
-                      </a>
+                      {urlService.getFullShortenedUrl(urlItem.short_code)}
                     </div>
                     <div className="flex space-x-2">
                       <button
@@ -270,14 +261,7 @@ const AuthenticatedView = () => {
                   </div>
                   <div className="p-3 border-t border-gray-100">
                     <div className="text-sm text-gray-600 truncate mb-1">
-                      <a
-                        href={urlItem.original_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        {urlItem.original_url}
-                      </a>
+                      {urlItem.original_url}
                     </div>
                     <div className="flex flex-wrap items-center text-xs text-gray-500">
                       <div className="flex items-center mr-3">
