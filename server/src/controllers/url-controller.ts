@@ -13,6 +13,7 @@ import {
   getShortenedUrlsWithClickCounts,
   getShortenedUrlsWithClickCountsPaginated,
   getDailyClickCounts,
+  getTopUrlsByClicks,
 } from "../models/shortened-url";
 import redisService from "../services/redis.service";
 
@@ -546,6 +547,35 @@ export async function getUrlAnalytics(req: Request, res: Response) {
     console.error("Error fetching URL analytics:", error);
     return res.status(500).json({
       error: "Failed to fetch URL analytics",
+    });
+  }
+}
+
+/**
+ * Get top URLs by click count
+ */
+export async function getTopUrls(req: Request, res: Response) {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+    const userId = req.query.userId as string | undefined;
+
+    // Validate limit parameter
+    if (isNaN(limit) || limit < 1 || limit > 20) {
+      return res.status(400).json({
+        error: "Limit parameter must be a number between 1 and 20",
+      });
+    }
+
+    const topUrls = await getTopUrlsByClicks(limit, userId);
+
+    return res.json({
+      success: true,
+      urls: topUrls,
+    });
+  } catch (error) {
+    console.error("Error fetching top URLs:", error);
+    return res.status(500).json({
+      error: "Failed to fetch top URLs",
     });
   }
 }

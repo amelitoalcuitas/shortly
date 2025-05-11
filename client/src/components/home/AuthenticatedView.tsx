@@ -250,7 +250,7 @@ const AuthenticatedView = () => {
 
         {/* User's URLs */}
         <div className="bg-white rounded-lg p-6 border border-gray-200">
-          <div className="flex justify-between items-center  mb-4">
+          <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-800">
               your shortlies
             </h2>
@@ -306,8 +306,18 @@ const AuthenticatedView = () => {
                   className="border border-gray-200 rounded-md overflow-hidden"
                 >
                   <div className="p-3 flex items-center justify-between bg-gray-50">
-                    <div className="text-primary font-medium truncate mr-2">
-                      {urlService.getFullShortenedUrl(urlItem.short_code)}
+                    <div className="min-w-0 flex-grow overflow-hidden mr-2">
+                      <a
+                        href={urlService.getRedirectUrl(urlItem.short_code)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary font-medium truncate hover:underline block"
+                        title={urlService.getFullShortenedUrl(
+                          urlItem.short_code
+                        )}
+                      >
+                        {urlService.getFullShortenedUrl(urlItem.short_code)}
+                      </a>
                     </div>
                     <div className="flex space-x-2">
                       <button
@@ -349,9 +359,16 @@ const AuthenticatedView = () => {
                     </div>
                   </div>
                   <div className="p-3 border-t border-gray-100">
-                    <div className="text-sm text-gray-600 truncate mb-1">
+                    <a
+                      href={urlItem.original_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-gray-600 truncate mb-1 hover:text-gray-800 hover:underline block w-full overflow-hidden"
+                      title={urlItem.original_url}
+                    >
                       {urlItem.original_url}
-                    </div>
+                    </a>
+
                     <div className="flex flex-wrap items-center justify-between text-xs text-gray-500">
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center">

@@ -10,6 +10,7 @@ import {
   getUrlClickCountEndpoint,
   getUrlsWithClickCounts,
   getUrlAnalytics,
+  getTopUrls,
 } from "../controllers/url-controller";
 
 const router = express.Router();
@@ -52,6 +53,11 @@ router.get("/clicks/:code", (req, res) => {
 // Get analytics data for a shortened URL
 router.get("/analytics/:id", (req, res) => {
   getUrlAnalytics(req, res);
+});
+
+// Get top URLs by click count
+router.get("/top", (req, res) => {
+  getTopUrls(req, res);
 });
 
 // Delete a shortened URL

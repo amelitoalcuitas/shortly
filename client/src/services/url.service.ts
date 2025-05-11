@@ -254,6 +254,36 @@ class UrlService {
       throw error;
     }
   }
+
+  /**
+   * Get top URLs by click count
+   * @param limit Number of top URLs to return (default: 5)
+   * @param userId Optional user ID to filter URLs by user
+   * @returns Promise with array of top URLs including click counts
+   */
+  async getTopUrls(
+    limit: number = 5,
+    userId?: string
+  ): Promise<Array<ShortenedUrl & { clickCount: number }>> {
+    try {
+      // Build the query parameters
+      const params = new URLSearchParams();
+      params.append("limit", limit.toString());
+      if (userId) {
+        params.append("userId", userId);
+      }
+
+      const response = await apiClient.get<{
+        success: boolean;
+        urls: Array<ShortenedUrl & { clickCount: number }>;
+      }>(`${this.baseUrl}/top?${params.toString()}`);
+
+      return response.data.urls;
+    } catch (error) {
+      console.error("Error fetching top URLs:", error);
+      throw error;
+    }
+  }
 }
 
 // Create and export a singleton instance

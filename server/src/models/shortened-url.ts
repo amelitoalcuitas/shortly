@@ -484,3 +484,36 @@ export async function getDailyClickCounts(
 
   return results.rows;
 }
+
+/**
+ * Get top URLs by click count
+ * @param limit Number of top URLs to return (default: 5)
+ * @param userId Optional user ID to filter URLs by user
+ * @returns Promise with array of URLs including click counts
+ */
+export async function getTopUrlsByClicks(
+  limit: number = 5,
+  userId?: string
+): Promise<Array<ShortenedUrl & { clickCount: number }>> {
+  // Build the base query
+  let query = db(TABLE_NAME)
+    .select([
+      `${TABLE_NAME}.*`,
+      db.raw('COALESCE(COUNT("url_clicks"."id"), 0) as "clickCount"'),
+    ])
+    .leftJoin("url_clicks", `${TABLE_NAME}.id`, "url_clicks.shortened_url_id")
+    .groupBy(`${TABLE_NAME}.id`);
+
+  // Add user filter if userId is provided
+  if (userId) {
+    query = query.where({ [`${TABLE_NAME}.user_id`]: userId });
+  }
+
+  // Get the top URLs by click count
+  const results = await query.orderBy("clickCount", "desc").limit(limit);
+
+  return results.map((result) => ({
+    ...result,
+    clickCount: parseInt(result.clickCount as string) || 0,
+  }));
+}
