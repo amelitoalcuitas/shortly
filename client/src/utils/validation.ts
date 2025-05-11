@@ -30,6 +30,25 @@ export const normalizeUrl = (url: string): string => {
 };
 
 /**
+ * Checks if a URL is the same as the host URL
+ * @param url URL to check
+ * @param hostUrl Host URL to compare against
+ * @returns boolean indicating if URL is the same as host
+ */
+export const isSameAsHost = (url: string, hostUrl: string): boolean => {
+  // Normalize both URLs for comparison
+  const normalizedUrl = normalizeUrl(url);
+  const normalizedHostUrl = normalizeUrl(hostUrl);
+
+  // Remove trailing slashes for comparison
+  const cleanUrl = normalizedUrl.replace(/\/+$/, "");
+  const cleanHostUrl = normalizedHostUrl.replace(/\/+$/, "");
+
+  // Check if the URL is the same as the host
+  return cleanUrl === cleanHostUrl || cleanUrl.startsWith(cleanHostUrl + "/");
+};
+
+/**
  * Function to validate email
  * @param email Email string to validate
  * @returns boolean indicating if email is valid

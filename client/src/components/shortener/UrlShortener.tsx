@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Copy, SpinnerGap, Warning, X } from "@phosphor-icons/react";
 import { urlService } from "../../services";
 import { AxiosError } from "axios";
-import { isValidUrl, normalizeUrl } from "../../utils/validation";
+import { isValidUrl, normalizeUrl, isSameAsHost } from "../../utils/validation";
 
 interface UrlShortenerProps {
   userId?: string;
@@ -17,7 +17,7 @@ const UrlShortener = ({
   customCodeEnabled = false,
   onUrlShortened,
   className = "",
-  title = "let's make your URL it shorter",
+  title = "let's make it shorter",
 }: UrlShortenerProps) => {
   const [url, setUrl] = useState("");
   const [customCode, setCustomCode] = useState("");
@@ -25,7 +25,10 @@ const UrlShortener = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [error, setError] = useState("");
-  const [expirationDays, setExpirationDays] = useState<number | "">("");
+  // Default to 7 days for non-logged-in users
+  const [expirationDays, setExpirationDays] = useState<number | "">(
+    userId ? "" : 7
+  );
 
   // Reset the copied state after 2 seconds
   useEffect(() => {
@@ -99,6 +102,16 @@ const UrlShortener = ({
       return;
     }
 
+    // Add protocol if missing using the normalizeUrl utility function
+    const urlToShorten = normalizeUrl(url);
+
+    // Check if the URL is the same as the host URL
+    const hostUrl = urlService.getBaseUrl();
+    if (isSameAsHost(urlToShorten, hostUrl)) {
+      setError("You cannot shorten the URL of this site.");
+      return;
+    }
+
     // Validate custom code if provided
     if (customCodeEnabled && customCode && !isValidCustomCode(customCode)) {
       if (!CUSTOM_CODE_REGEX.test(customCode)) {
@@ -108,9 +121,6 @@ const UrlShortener = ({
       }
       return;
     }
-
-    // Add protocol if missing using the normalizeUrl utility function
-    const urlToShorten = normalizeUrl(url);
 
     setError("");
     setIsLoading(true);
@@ -124,8 +134,12 @@ const UrlShortener = ({
         original_url: urlToShorten,
         user_id: userId,
         custom_code: customCodeEnabled && customCode ? customCode : undefined,
-        expires_in_days:
-          typeof expirationDays === "number" ? expirationDays : undefined,
+        // Always send expiration days for non-logged-in users (default 7)
+        expires_in_days: userId
+          ? typeof expirationDays === "number"
+            ? expirationDays
+            : undefined
+          : 7,
       });
 
       // Get the full shortened URL with domain
@@ -159,7 +173,8 @@ const UrlShortener = ({
     setCustomCode("");
     setShortenedUrl("");
     setError("");
-    setExpirationDays("");
+    // Reset expiration to default value based on login status
+    setExpirationDays(userId ? "" : 7);
   };
 
   // Function to copy the shortened URL to clipboard
@@ -243,40 +258,57 @@ const UrlShortener = ({
       )}
 
       <div className="mb-4">
-        <label
-          htmlFor="expiration"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          Link expiration (optional)
-        </label>
-        <div className="relative">
-          <select
-            id="expiration"
-            value={expirationDays === "" ? "" : expirationDays.toString()}
-            onChange={handleExpirationChange}
-            className="w-full p-3 pr-10 appearance-none border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          >
-            <option value="">Never expires</option>
-            <option value="1">1 day</option>
-            <option value="7">7 days</option>
-            <option value="30">30 days</option>
-            <option value="90">90 days</option>
-            <option value="365">1 year</option>
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
-            <svg
-              className="fill-current h-4 w-4"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
+        {userId ? (
+          <>
+            <label
+              htmlFor="expiration"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
-              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-            </svg>
+              Link expiration (optional)
+            </label>
+            <div className="relative">
+              <select
+                id="expiration"
+                value={expirationDays === "" ? "" : expirationDays.toString()}
+                onChange={handleExpirationChange}
+                className="w-full p-3 pr-10 appearance-none border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">Never expires</option>
+                <option value="1">1 day</option>
+                <option value="7">7 days</option>
+                <option value="30">30 days</option>
+                <option value="90">90 days</option>
+                <option value="365">1 year</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
+                <svg
+                  className="fill-current h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                </svg>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-gray-500">
+              Select how long this link should be active. After expiration, the
+              link will no longer work.
+            </p>
+          </>
+        ) : (
+          <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
+            <p className="text-sm text-gray-700 flex items-center">
+              <span className="mr-1">⏱️</span>
+              <span className="text-primary font-medium">
+                Guest links expire in 7 days.
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              Create an account to customize expiration or create permanent
+              links.
+            </p>
           </div>
-        </div>
-        <p className="mt-1 text-xs text-gray-500">
-          Select how long this link should be active. After expiration, the link
-          will no longer work.
-        </p>
+        )}
       </div>
 
       {error && (
@@ -292,6 +324,8 @@ const UrlShortener = ({
           isLoading ||
           !url.trim() ||
           !isValidUrl(url) ||
+          (url.trim() &&
+            isSameAsHost(normalizeUrl(url), urlService.getBaseUrl())) ||
           !!(customCodeEnabled && customCode && !isValidCustomCode(customCode))
         }
         className="w-full bg-primary text-white py-3 px-4 rounded-md hover:bg-opacity-90 transition-colors font-medium disabled:opacity-70 disabled:cursor-not-allowed"
@@ -330,12 +364,13 @@ const UrlShortener = ({
               )}
             </button>
           </div>
-          {expirationDays && (
+          {/* Always show expiration for non-logged in users or when expiration is set */}
+          {(!userId || expirationDays) && (
             <div className="px-3 pb-3 text-xs text-gray-500 flex items-center">
               <span className="flex items-center">
                 <span className="mr-1">⏱️</span>
                 Expires in{" "}
-                {expirationDays === 1 ? "1 day" : `${expirationDays} days`}
+                {expirationDays === 1 ? "1 day" : `${expirationDays || 7} days`}
               </span>
             </div>
           )}
