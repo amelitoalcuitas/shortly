@@ -54,6 +54,10 @@ services:
       - SMTP_FROM=noreply@shortly.com
       - CLIENT_URL=http://localhost:3000
       - JWT_SECRET=shortly-secret-key
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_URL=redis://redis:6379
+      - REDIS_TTL=3600
     volumes:
       - ./server/src:/app/src
     extra_hosts:
@@ -97,6 +101,18 @@ services:
       - 1025:1025 # SMTP server
       - 8025:8025 # Web UI
 
+  redis:
+    container_name: dev-redis
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --save 60 1 --loglevel warning
+
 volumes:
   postgres-data:
+    driver: local
+  redis-data:
     driver: local

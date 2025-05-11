@@ -14,6 +14,7 @@ import {
   getShortenedUrlsWithClickCountsPaginated,
   getDailyClickCounts,
 } from "../models/shortened-url";
+import redisService from "../services/redis.service";
 
 /**
  * Create a new shortened URL
@@ -125,11 +126,16 @@ export async function getUrlByCode(req: Request, res: Response) {
  * - If the original URL already has query parameters, the new ones will be added
  * - UTM parameters (utm_source, utm_medium, utm_campaign, etc.) are commonly used for tracking
  *
+ * Uses Redis caching for improved performance:
+ * - Caches URL lookups to reduce database load
+ * - Uses Redis for fast click counting
+ *
  * Example: /{code}?utm_source=newsletter&utm_medium=email&utm_campaign=summer_sale
  */
 export async function redirectToUrl(req: Request, res: Response) {
   try {
     const { code } = req.params;
+    const startTime = Date.now(); // For performance tracking
 
     // Skip redirection for API routes and other special paths
     if (code.startsWith("api") || code === "favicon.ico") {
@@ -138,7 +144,12 @@ export async function redirectToUrl(req: Request, res: Response) {
       });
     }
 
+    // Try to get the URL from Redis cache first (handled in getShortenedUrlByCode)
     const url = await getShortenedUrlByCode(code);
+
+    // Log performance metrics
+    const lookupTime = Date.now() - startTime;
+    console.debug(`URL lookup for ${code} took ${lookupTime}ms`);
 
     if (!url) {
       // For development, we can show a more user-friendly error page

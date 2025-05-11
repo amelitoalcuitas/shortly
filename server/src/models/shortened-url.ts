@@ -1,5 +1,6 @@
 import { db } from "../db/knex";
 import { randomBytes } from "crypto";
+import redisService from "../services/redis.service";
 
 export interface ShortenedUrl {
   id: string;
@@ -81,6 +82,15 @@ export async function createShortenedUrl(
     })
     .returning("*");
 
+  // Cache the newly created URL
+  try {
+    const cacheKey = `url:${short_code}`;
+    await redisService.set(cacheKey, shortenedUrl);
+  } catch (error) {
+    // If Redis caching fails, just log the error and continue
+    console.error(`Redis error in createShortenedUrl: ${error}`);
+  }
+
   return shortenedUrl;
 }
 
@@ -102,11 +112,38 @@ export function isUrlExpired(url: ShortenedUrl): boolean {
 
 /**
  * Get a shortened URL by its short code
+ * Uses Redis cache for improved performance
  */
 export async function getShortenedUrlByCode(
   short_code: string
 ): Promise<ShortenedUrl | null> {
-  return db(TABLE_NAME).where({ short_code }).first();
+  // Generate a cache key for this short code
+  const cacheKey = `url:${short_code}`;
+
+  try {
+    // Try to get the URL from Redis cache first
+    const cachedUrl = await redisService.get<ShortenedUrl>(cacheKey);
+
+    if (cachedUrl) {
+      // URL found in cache, return it
+      return cachedUrl;
+    }
+
+    // URL not in cache, get it from the database
+    const url = await db(TABLE_NAME).where({ short_code }).first();
+
+    if (url) {
+      // Store the URL in Redis cache for future requests
+      // Cache for 1 hour by default (configured in REDIS_TTL env var)
+      await redisService.set(cacheKey, url);
+    }
+
+    return url;
+  } catch (error) {
+    // If there's an error with Redis, fall back to database
+    console.error(`Redis error in getShortenedUrlByCode: ${error}`);
+    return db(TABLE_NAME).where({ short_code }).first();
+  }
 }
 
 /**
@@ -173,12 +210,29 @@ export async function getShortenedUrlsByUserPaginated(
 
 /**
  * Log a click for a shortened URL
+ * Uses Redis for fast click counting and database for permanent storage
  */
 export async function logUrlClick(
   shortened_url_id: string,
   user_agent?: string,
   ip_address?: string
 ): Promise<void> {
+  // First, increment the click count in Redis for real-time stats
+  try {
+    const clickCountKey = `clicks:${shortened_url_id}`;
+    await redisService.increment(clickCountKey);
+
+    // Set expiry on the counter if it's new (default TTL from env)
+    const exists = await redisService.exists(clickCountKey);
+    if (!exists) {
+      await redisService.set(clickCountKey, 1);
+    }
+  } catch (error) {
+    console.error(`Redis error in logUrlClick: ${error}`);
+    // Continue with database logging even if Redis fails
+  }
+
+  // Then, log the click in the database for permanent storage
   await db("url_clicks").insert({
     shortened_url_id,
     user_agent,
@@ -188,16 +242,44 @@ export async function logUrlClick(
 
 /**
  * Get the click count for a shortened URL
+ * Uses Redis cache for faster retrieval when available
  */
 export async function getUrlClickCount(
   shortened_url_id: string
 ): Promise<number> {
-  const result = await db("url_clicks")
-    .count("id as count")
-    .where({ shortened_url_id })
-    .first();
+  try {
+    // Try to get the click count from Redis first
+    const clickCountKey = `clicks:${shortened_url_id}`;
+    const cachedCount = await redisService.get<number>(clickCountKey);
 
-  return parseInt(result?.count as string) || 0;
+    if (cachedCount !== null) {
+      // Return the cached count if available
+      return cachedCount;
+    }
+
+    // If not in cache, get from database
+    const result = await db("url_clicks")
+      .count("id as count")
+      .where({ shortened_url_id })
+      .first();
+
+    const count = parseInt(result?.count as string) || 0;
+
+    // Cache the count for future requests
+    await redisService.set(clickCountKey, count);
+
+    return count;
+  } catch (error) {
+    console.error(`Redis error in getUrlClickCount: ${error}`);
+
+    // Fall back to database if Redis fails
+    const result = await db("url_clicks")
+      .count("id as count")
+      .where({ shortened_url_id })
+      .first();
+
+    return parseInt(result?.count as string) || 0;
+  }
 }
 
 /**
@@ -231,9 +313,29 @@ export async function getRecentUrlClicks(
  * Delete a shortened URL by its ID
  */
 export async function deleteShortenedUrl(id: string): Promise<boolean> {
+  // First, get the URL to find its short code for cache invalidation
+  const url = await db(TABLE_NAME).where({ id }).first();
+
+  if (!url) {
+    return false;
+  }
+
+  // Delete the URL from the database
   const deleted = await db(TABLE_NAME).where({ id }).delete();
 
-  return deleted > 0;
+  if (deleted > 0) {
+    // If deletion was successful, also remove from cache
+    try {
+      const cacheKey = `url:${url.short_code}`;
+      await redisService.del(cacheKey);
+    } catch (error) {
+      // If Redis operation fails, just log the error
+      console.error(`Redis error in deleteShortenedUrl: ${error}`);
+    }
+    return true;
+  }
+
+  return false;
 }
 
 /**

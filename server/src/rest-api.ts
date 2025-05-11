@@ -8,6 +8,8 @@ const app = express();
 import { db } from "./db/knex";
 import urlRoutes from "./routes/url-routes";
 import authRoutes from "./routes/auth-routes";
+// Import Redis service (this will initialize the connection)
+import redisService from "./services/redis.service";
 
 //middleware
 app.use(

@@ -66,6 +66,7 @@ The application follows a modern microservices architecture with:
 - **Backend:** A RESTful API built with **Express.js** on Node.js
 - **Frontend:** A responsive user interface built with **React.js**, TypeScript, and Tailwind CSS
 - **Database:** A **PostgreSQL** database with query operations powered by **Knex.js**
+- **Caching:** **Redis** for high-performance URL caching and click counting
 - **Development Environment:** **Docker Compose** for orchestrating all services locally
 
 ### Code Base Structure
@@ -286,7 +287,7 @@ You can seed your database with initial data using Knex.js seed files. To create
   - Database integration via Knex.js
   - TypeScript for type safety
   - Hot reloading during development (via nodemon)
-- **Port Mapping:**  
+- **Port Mapping:**
   Externally accessible on `http://localhost:8000`
 - **API Documentation:**
   - Swagger UI (when implemented): `http://localhost:8000/api-docs`
@@ -308,7 +309,7 @@ You can seed your database with initial data using Knex.js seed files. To create
   - Tailwind CSS for styling
   - Vite for fast development and optimized builds
   - Hot module replacement during development
-- **Port Mapping:**  
+- **Port Mapping:**
   Externally accessible on `http://localhost:3000`
 - **Environment Variables:**
   - `VITE_API_URL=http://localhost:8000` - Backend API URL
@@ -320,20 +321,20 @@ You can seed your database with initial data using Knex.js seed files. To create
 
 - **Description:** A powerful, open-source relational database system
 - **Image:** `postgres:16-alpine` (lightweight Alpine Linux-based image)
-- **Port Mapping:**  
+- **Port Mapping:**
   Externally accessible on `localhost:5432`
 - **Key Features:**
   - ACID compliance
   - JSON support
   - Robust transaction support
   - Full-text search capabilities
-- **Query Builder:**  
+- **Query Builder:**
   **Knex.js** is used to manage migrations and queries in the backend
 - **Credentials:**
   - **Username:** `symph`
   - **Password:** `symph`
   - **Database Name:** `symph`
-- **Volume:**  
+- **Volume:**
   Data is persisted in the `postgres-data` volume, ensuring data survives container restarts
 - **Connection String:**
 
@@ -349,7 +350,7 @@ You can seed your database with initial data using Knex.js seed files. To create
 
 - **Description:** A comprehensive web-based administration tool for PostgreSQL
 - **Image:** `dpage/pgadmin4`
-- **Port Mapping:**  
+- **Port Mapping:**
   Accessible on `http://localhost:5050`
 - **Key Features:**
   - Database object browser
@@ -369,6 +370,22 @@ You can seed your database with initial data using Knex.js seed files. To create
      - Username: `symph`
      - Password: `symph`
      - Database: `symph`
+
+#### Redis Cache
+
+- **Description:** A high-performance in-memory data store used for caching and real-time analytics
+- **Image:** `redis:7-alpine` (lightweight Alpine Linux-based image)
+- **Port Mapping:**
+  Externally accessible on `localhost:6379`
+- **Key Features:**
+  - In-memory key-value store for high-speed data access
+  - URL caching for improved redirection performance
+  - Fast click counting for real-time analytics
+  - Automatic fallback to database if Redis is unavailable
+- **Volume:**
+  Data is persisted in the `redis-data` volume, ensuring data survives container restarts
+- **Documentation:**
+  - See `server/src/services/README-REDIS.md` for implementation details
 
 #### SMTP Server
 
@@ -396,6 +413,7 @@ You can seed your database with initial data using Knex.js seed files. To create
 | Backend API | [http://localhost:8000](http://localhost:8000)                   | Express.js REST API                |
 | API Docs    | [http://localhost:8000/api-docs](http://localhost:8000/api-docs) | API documentation (if implemented) |
 | PostgreSQL  | `localhost:5432` (via psql or client tools)                      | Database connection                |
+| Redis       | `localhost:6379` (via redis-cli or client tools)                 | Cache connection                   |
 | pgAdmin     | [http://localhost:5050](http://localhost:5050)                   | Database management interface      |
 | SMTP Web UI | [http://localhost:8025](http://localhost:8025)                   | Email testing interface            |
 
@@ -445,6 +463,7 @@ Default Ports:
 - Frontend (React): 3000
 - Backend (Express): 8000
 - PostgreSQL: 5432
+- Redis: 6379
 - pgAdmin: 5050
 - SMTP dev server: 1025 (SMTP), 8025 (Web UI)
 
