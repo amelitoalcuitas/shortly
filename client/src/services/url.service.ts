@@ -151,6 +151,27 @@ class UrlService {
       throw error;
     }
   }
+
+  /**
+   * Get analytics data for a shortened URL
+   * @param urlId The ID of the shortened URL
+   * @param days Number of days to look back (default: 7)
+   * @returns Promise with analytics data
+   */
+  async getUrlAnalytics(
+    urlId: string,
+    days: number = 7
+  ): Promise<{ dailyClicks: Array<{ date: string; count: number }> }> {
+    try {
+      const response = await apiClient.get(
+        `${this.baseUrl}/analytics/${urlId}?days=${days}`
+      );
+      return response.data.analytics;
+    } catch (error) {
+      console.error("Error fetching URL analytics:", error);
+      throw error;
+    }
+  }
 }
 
 // Create and export a singleton instance

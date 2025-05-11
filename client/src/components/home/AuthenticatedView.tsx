@@ -6,11 +6,15 @@ import {
   Clock,
   Timer,
   Trash,
+  ChartLine,
+  CaretDown,
+  CaretUp,
 } from "@phosphor-icons/react";
 import { urlService } from "../../services";
 import { useAuth } from "../../hooks/useAuth";
 import { ShortenedUrl } from "../../types";
 import UrlShortener from "../shortener/UrlShortener";
+import UrlAnalyticsChart from "../analytics/UrlAnalyticsChart";
 
 // Interface to extend ShortenedUrl with click count
 interface ShortenedUrlWithClicks extends ShortenedUrl {
@@ -23,6 +27,7 @@ const AuthenticatedView = () => {
   const [userUrls, setUserUrls] = useState<ShortenedUrlWithClicks[]>([]);
   const [isLoadingUrls, setIsLoadingUrls] = useState(false);
   const [deletingUrlId, setDeletingUrlId] = useState<string | null>(null);
+  const [expandedUrlId, setExpandedUrlId] = useState<string | null>(null);
 
   // Reset the copied state after 2 seconds
   useEffect(() => {
@@ -169,6 +174,11 @@ const AuthenticatedView = () => {
     }
   };
 
+  // Toggle analytics section for a URL
+  const toggleAnalytics = (urlId: string) => {
+    setExpandedUrlId((prevId) => (prevId === urlId ? null : urlId));
+  };
+
   return (
     <div className="flex-grow flex flex-col items-center p-4">
       <div className="max-w-4xl w-full">
@@ -263,26 +273,51 @@ const AuthenticatedView = () => {
                     <div className="text-sm text-gray-600 truncate mb-1">
                       {urlItem.original_url}
                     </div>
-                    <div className="flex flex-wrap items-center text-xs text-gray-500">
-                      <div className="flex items-center mr-3">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {formatRelativeTime(urlItem.createdAt)}
+                    <div className="flex flex-wrap items-center justify-between text-xs text-gray-500">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatRelativeTime(urlItem.createdAt)}
+                        </div>
+                        <div className="flex items-center">
+                          <span>{urlItem.clickCount || 0} clicks</span>
+                        </div>
+                        <div
+                          className={`flex items-center ${
+                            urlItem.expires_at && isUrlExpired(urlItem)
+                              ? "text-red-500"
+                              : ""
+                          }`}
+                        >
+                          <Timer className="h-3 w-3 mr-1" weight="bold" />
+                          {formatExpirationTime(urlItem.expires_at)}
+                        </div>
                       </div>
-                      <div className="flex items-center mr-3">
-                        <span>{urlItem.clickCount || 0} clicks</span>
-                      </div>
-                      <div
-                        className={`flex items-center ${
-                          urlItem.expires_at && isUrlExpired(urlItem)
-                            ? "text-red-500"
-                            : ""
-                        }`}
+                      <button
+                        onClick={() => toggleAnalytics(urlItem.id)}
+                        className="flex items-center text-gray-500 hover:text-primary transition-colors"
+                        aria-expanded={expandedUrlId === urlItem.id}
+                        aria-controls={`analytics-${urlItem.id}`}
                       >
-                        <Timer className="h-3 w-3 mr-1" weight="bold" />
-                        {formatExpirationTime(urlItem.expires_at)}
-                      </div>
+                        <ChartLine className="h-3 w-3 mr-1" weight="bold" />
+                        <span>Analytics</span>
+                        {expandedUrlId === urlItem.id ? (
+                          <CaretUp className="h-3 w-3 ml-1" weight="bold" />
+                        ) : (
+                          <CaretDown className="h-3 w-3 ml-1" weight="bold" />
+                        )}
+                      </button>
                     </div>
                   </div>
+                  {/* Collapsible analytics section */}
+                  {expandedUrlId === urlItem.id && (
+                    <div id={`analytics-${urlItem.id}`}>
+                      <UrlAnalyticsChart
+                        urlId={urlItem.id}
+                        shortCode={urlItem.short_code}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

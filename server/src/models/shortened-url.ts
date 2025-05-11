@@ -235,3 +235,44 @@ export async function getShortenedUrlsWithClickCounts(
     clickCount: parseInt(result.clickCount as string) || 0,
   }));
 }
+
+/**
+ * Get daily click counts for a shortened URL over a specified period
+ * @param shortened_url_id The ID of the shortened URL
+ * @param days Number of days to look back (default: 7)
+ * @returns Promise with array of daily click counts
+ */
+export async function getDailyClickCounts(
+  shortened_url_id: string,
+  days: number = 7
+): Promise<Array<{ date: string; count: number }>> {
+  // Calculate the start date (n days ago)
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days + 1); // +1 to include today
+  startDate.setHours(0, 0, 0, 0); // Start of the day
+
+  // Get all dates in the range, even those with zero clicks
+  const results = await db.raw(
+    `
+    WITH date_series AS (
+      SELECT generate_series(
+        ?::timestamp,
+        now()::date,
+        '1 day'::interval
+      )::date as date
+    )
+    SELECT
+      date_series.date::text as date,
+      COALESCE(COUNT(url_clicks.id), 0) as count
+    FROM date_series
+    LEFT JOIN url_clicks ON
+      date_trunc('day', url_clicks.clicked_at) = date_series.date AND
+      url_clicks.shortened_url_id = ?
+    GROUP BY date_series.date
+    ORDER BY date_series.date ASC
+  `,
+    [startDate.toISOString(), shortened_url_id]
+  );
+
+  return results.rows;
+}

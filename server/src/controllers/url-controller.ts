@@ -10,6 +10,7 @@ import {
   deleteShortenedUrl,
   isUrlExpired,
   getShortenedUrlsWithClickCounts,
+  getDailyClickCounts,
 } from "../models/shortened-url";
 
 /**
@@ -433,6 +434,39 @@ export async function getUrlsWithClickCounts(req: Request, res: Response) {
     console.error("Error fetching shortened URLs with click counts:", error);
     return res.status(500).json({
       error: "Failed to fetch shortened URLs with click counts",
+    });
+  }
+}
+
+/**
+ * Get daily click analytics for a shortened URL
+ */
+export async function getUrlAnalytics(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const days = req.query.days ? parseInt(req.query.days as string) : 7;
+
+    // Validate days parameter
+    if (isNaN(days) || days < 1 || days > 30) {
+      return res.status(400).json({
+        error: "Days parameter must be a number between 1 and 30",
+      });
+    }
+
+    const dailyClicks = await getDailyClickCounts(id, days);
+
+    return res.json({
+      success: true,
+      analytics: {
+        dailyClicks,
+        totalDays: days,
+        urlId: id,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching URL analytics:", error);
+    return res.status(500).json({
+      error: "Failed to fetch URL analytics",
     });
   }
 }
