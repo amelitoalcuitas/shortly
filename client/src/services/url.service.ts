@@ -116,6 +116,63 @@ class UrlService {
   getRedirectUrl(shortCode: string): string {
     return `${this.getBaseUrl()}/${shortCode}`;
   }
+
+  /**
+   * Get the click count for a shortened URL without incrementing it
+   * @param code The short code to get click count for
+   * @returns Promise with click count
+   */
+  async getUrlClickCount(code: string): Promise<number> {
+    try {
+      const response = await apiClient.get(`${this.baseUrl}/clicks/${code}`);
+      return response.data.clickCount || 0;
+    } catch (error) {
+      console.error("Error getting URL click count:", error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get all URLs for a user with their click counts
+   * @param userId User ID to look up
+   * @returns Promise with array of URLs including click counts
+   */
+  async getUrlsWithClickCounts(
+    userId: string
+  ): Promise<Array<ShortenedUrl & { clickCount: number }>> {
+    try {
+      // Get the user's URLs
+      const urls = await this.getUrlsByUser(userId);
+
+      // For each URL, get the click count using the dedicated endpoint
+      const urlsWithClicks = await Promise.all(
+        urls.map(async (url) => {
+          try {
+            // Use the method that doesn't increment the click count
+            const clickCount = await this.getUrlClickCount(url.short_code);
+            return {
+              ...url,
+              clickCount,
+            };
+          } catch (error) {
+            console.error(
+              `Error getting click count for ${url.short_code}:`,
+              error
+            );
+            return {
+              ...url,
+              clickCount: 0,
+            };
+          }
+        })
+      );
+
+      return urlsWithClicks;
+    } catch (error) {
+      console.error("Error fetching URLs with click counts:", error);
+      throw error;
+    }
+  }
 }
 
 // Create and export a singleton instance

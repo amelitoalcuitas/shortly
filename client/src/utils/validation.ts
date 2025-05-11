@@ -2,7 +2,11 @@
  * Utility functions and constants for validation
  */
 
-import isUrl from "validator/lib/isURL";
+// URL validation regex
+const URL_REGEX = /^(http[s]?:\/\/)?(www\.)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\.?/;
+
+// Email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Function to validate URL
@@ -10,7 +14,7 @@ import isUrl from "validator/lib/isURL";
  * @returns boolean indicating if URL is valid
  */
 export const isValidUrl = (url: string): boolean => {
-  return isUrl(url);
+  return URL_REGEX.test(url);
 };
 
 /**
@@ -23,4 +27,13 @@ export const normalizeUrl = (url: string): string => {
     return `https://${url}`;
   }
   return url;
+};
+
+/**
+ * Function to validate email
+ * @param email Email string to validate
+ * @returns boolean indicating if email is valid
+ */
+export const isValidEmail = (email: string): boolean => {
+  return EMAIL_REGEX.test(email);
 };

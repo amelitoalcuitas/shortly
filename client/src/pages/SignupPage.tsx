@@ -4,6 +4,7 @@ import Footer from "../components/Footer";
 import { useAuth } from "../hooks/useAuth";
 import { SpinnerGap, Warning, Check } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
+import { isValidEmail } from "../utils/validation";
 
 const SignupPage: React.FC = () => {
   const { isAuthenticated, signup } = useAuth();
@@ -31,8 +32,7 @@ const SignupPage: React.FC = () => {
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmail(email)) {
       setError("Please enter a valid email address");
       return false;
     }

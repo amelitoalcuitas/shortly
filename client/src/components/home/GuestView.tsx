@@ -5,7 +5,7 @@ const GuestView = () => {
     <div className="flex-grow flex flex-col items-center justify-center p-4">
       <div className="max-w-xl w-full">
         {/* URL Shortener Card */}
-        <UrlShortener title="let's make your URL it shorter" className="mb-4" />
+        <UrlShortener className="mb-4" />
 
         <div className="text-gray-700 text-center text-sm">
           <p>

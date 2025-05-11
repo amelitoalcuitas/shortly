@@ -5,9 +5,12 @@ import {
   getUserByEmail,
   validatePassword,
   generateResetToken,
-  validateResetToken,
   resetPassword,
 } from "../models/user";
+import emailService from "../services/email.service";
+
+// Email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Cookie configuration
 const COOKIE_OPTIONS = {
@@ -37,8 +40,7 @@ export async function signup(req: Request, res: Response) {
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!EMAIL_REGEX.test(email)) {
       return res.status(400).json({
         error: "Invalid email format",
       });
@@ -65,6 +67,14 @@ export async function signup(req: Request, res: Response) {
 
     // Set the token in an HttpOnly cookie
     res.cookie("auth_token", token, COOKIE_OPTIONS);
+
+    // Send welcome email
+    try {
+      await emailService.sendWelcomeEmail(user);
+    } catch (emailError) {
+      console.error("Error sending welcome email:", emailError);
+      // Continue with the response even if email fails
+    }
 
     // Return user info (excluding password)
     return res.status(201).json({
@@ -157,24 +167,42 @@ export async function requestPasswordReset(req: Request, res: Response) {
       });
     }
 
+    // Validate email format
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({
+        error: "Invalid email format",
+      });
+    }
+
     // Generate reset token
     const resetToken = await generateResetToken(email);
 
-    // In a real application, you would send an email with the reset link
-    // For this example, we'll just return success even if the email doesn't exist
-    // This prevents user enumeration attacks
+    // Send password reset email if the email exists
+    if (resetToken) {
+      try {
+        await emailService.sendPasswordResetEmail(email, resetToken);
+      } catch (emailError) {
+        console.error("Error sending password reset email:", emailError);
+        // We still return success to prevent user enumeration
+      }
+    }
 
-    // For development purposes, return the token in the response
-    // In production, you would NOT do this
-    return res.json({
+    // Always return success even if the email doesn't exist
+    // This prevents user enumeration attacks
+    const response: any = {
       message:
         "If an account with that email exists, a password reset link has been sent",
-      // Only include this in development
-      resetToken,
-      resetLink: `${req.protocol}://${req.get(
-        "host"
-      )}/reset-password?email=${email}&token=${resetToken}`,
-    });
+    };
+
+    // For development purposes, include the token in the response
+    if (process.env.NODE_ENV !== "production" && resetToken) {
+      response.resetToken = resetToken;
+      response.resetLink = `${
+        process.env.CLIENT_URL || "http://localhost:3000"
+      }/reset-password?email=${encodeURIComponent(email)}&token=${resetToken}`;
+    }
+
+    return res.json(response);
   } catch (error) {
     console.error("Error requesting password reset:", error);
     return res.status(500).json({
@@ -226,7 +254,7 @@ export async function resetPasswordWithToken(req: Request, res: Response) {
 /**
  * Logout a user by clearing the auth cookie
  */
-export async function logout(req: Request, res: Response) {
+export async function logout(_req: Request, res: Response) {
   try {
     // Clear the auth cookie
     res.clearCookie("auth_token", {

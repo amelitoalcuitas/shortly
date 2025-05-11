@@ -5,6 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 import { SpinnerGap, Warning, Check, ArrowLeft } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
 import { authService } from "../services";
+import { isValidEmail } from "../utils/validation";
 
 const ForgotPasswordPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -29,8 +30,7 @@ const ForgotPasswordPage: React.FC = () => {
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmail(email)) {
       setError("Please enter a valid email address");
       return false;
     }
@@ -51,7 +51,7 @@ const ForgotPasswordPage: React.FC = () => {
     try {
       await authService.forgotPassword(email);
       setSuccess(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Forgot password error:", err);
       // We don't want to reveal if an email exists or not for security reasons
       // So we show a success message even if the email doesn't exist
@@ -81,16 +81,16 @@ const ForgotPasswordPage: React.FC = () => {
           {success ? (
             <div className="space-y-6">
               <div className="p-4 bg-green-50 border border-green-100 rounded-md text-green-600 text-sm flex items-start">
-                <Check className="h-4 w-4 mr-2 mt-0.5" weight="bold" />
+                <Check className="h-4 w-6 mr-2" weight="bold" />
                 <div>
                   <p className="font-medium">Password reset email sent!</p>
                   <p className="mt-1">
-                    If an account exists with the email {email}, you will receive
-                    password reset instructions.
+                    If an account exists with the email {email}, you will
+                    receive password reset instructions.
                   </p>
                 </div>
               </div>
-              
+
               <div className="text-center">
                 <button
                   onClick={() => navigate("/login")}
@@ -104,7 +104,8 @@ const ForgotPasswordPage: React.FC = () => {
           ) : (
             <>
               <p className="text-gray-600 mb-6 text-sm">
-                Enter your email address and we'll send you instructions to reset your password.
+                Enter your email address and we'll send you instructions to
+                reset your password.
               </p>
 
               <form className="space-y-4" onSubmit={handleSubmit}>

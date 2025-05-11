@@ -48,6 +48,12 @@ services:
       - NODE_ENV=development
       - DB_CONNECTION_URI=postgres://symph:symph@db/symph?sslmode=disable
       - TELEMETRY_ENABLED=false
+      - SMTP_HOST=smtp-server
+      - SMTP_PORT=1025
+      - SMTP_SECURE=false
+      - SMTP_FROM=noreply@shortly.com
+      - CLIENT_URL=http://localhost:3000
+      - JWT_SECRET=shortly-secret-key
     volumes:
       - ./server/src:/app/src
     extra_hosts:

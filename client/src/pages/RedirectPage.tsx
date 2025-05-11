@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { urlService } from "../services";
 import { SpinnerGap, Warning } from "@phosphor-icons/react";
 
 /**
@@ -21,27 +20,14 @@ const RedirectPage = () => {
         return;
       }
 
-      try {
-        // First, get the URL data from the API
-        const urlData = await urlService.getUrlByCode(code);
+      // Redirect directly to the backend which will:
+      // 1. Check if the URL exists
+      // 2. Increment the click count if it does
+      // 3. Redirect to the original URL or show an error
+      window.location.href = `${import.meta.env.VITE_API_URL}/${code}`;
 
-        // Increment the click count via a separate API call (fire and forget)
-        fetch(`${import.meta.env.VITE_API_URL}/api/urls/increment/${code}`, {
-          method: "POST",
-        }).catch((err) => {
-          console.error("Error incrementing click count:", err);
-          // Don't block the redirect if this fails
-        });
-
-        // Then redirect to the original URL
-        window.location.href = urlData.original_url;
-      } catch (err) {
-        console.error("Error redirecting:", err);
-        setError(
-          "The shortened URL you're looking for doesn't exist or has been removed."
-        );
-        setIsLoading(false);
-      }
+      // Note: We don't need to handle errors here since the backend will handle them
+      // and show an appropriate error page if the URL doesn't exist
     };
 
     fetchAndRedirect();
@@ -74,22 +60,27 @@ const RedirectPage = () => {
   }
 
   // Show loading spinner while redirecting
-  return (
-    <div className="flex flex-col justify-center items-center min-h-screen bg-gray-50">
-      <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 max-w-md w-full text-center">
-        <SpinnerGap
-          className="animate-spin h-10 w-10 text-primary mx-auto mb-4"
-          weight="bold"
-        />
-        <h1 className="text-xl font-medium text-gray-700 mb-2">
-          Redirecting...
-        </h1>
-        <p className="text-gray-500">
-          You are being redirected to the original URL.
-        </p>
+  if (isLoading) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 max-w-md w-full text-center">
+          <SpinnerGap
+            className="animate-spin h-10 w-10 text-primary mx-auto mb-4"
+            weight="bold"
+          />
+          <h1 className="text-xl font-medium text-gray-700 mb-2">
+            Redirecting...
+          </h1>
+          <p className="text-gray-500">
+            You are being redirected to the original URL.
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // This should never be shown, but just in case
+  return null;
 };
 
 export default RedirectPage;

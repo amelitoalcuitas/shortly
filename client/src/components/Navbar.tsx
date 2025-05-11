@@ -3,7 +3,7 @@ import { useAuth } from "../hooks/useAuth";
 import { SignOut } from "@phosphor-icons/react";
 
 const Navbar: React.FC = () => {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   return (
     <nav className="bg-white font-medium text-gray-700 p-4 border-b border-gray-200">
@@ -23,7 +23,6 @@ const Navbar: React.FC = () => {
 
           {isAuthenticated ? (
             <>
-              <span className="text-gray-600">{user?.name || user?.email}</span>
               <button
                 onClick={logout}
                 className="bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200 transition-colors font-medium flex items-center"

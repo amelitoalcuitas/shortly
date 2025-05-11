@@ -5,10 +5,15 @@ import { useAuth } from "../../hooks/useAuth";
 import { ShortenedUrl } from "../../types";
 import UrlShortener from "../shortener/UrlShortener";
 
+// Interface to extend ShortenedUrl with click count
+interface ShortenedUrlWithClicks extends ShortenedUrl {
+  clickCount?: number;
+}
+
 const AuthenticatedView = () => {
   const { user } = useAuth();
   const [isCopied, setIsCopied] = useState(false);
-  const [userUrls, setUserUrls] = useState<ShortenedUrl[]>([]);
+  const [userUrls, setUserUrls] = useState<ShortenedUrlWithClicks[]>([]);
   const [isLoadingUrls, setIsLoadingUrls] = useState(false);
 
   // Reset the copied state after 2 seconds
@@ -21,20 +26,21 @@ const AuthenticatedView = () => {
     }
   }, [isCopied]);
 
-  // Fetch user's URLs
+  // Fetch user's URLs and their click counts
   const fetchUserUrls = useCallback(async () => {
     if (!user) return;
 
     setIsLoadingUrls(true);
     try {
-      const urls = await urlService.getUrlsByUser(user.id);
-      setUserUrls(urls);
+      // Use the service method that fetches URLs with click counts
+      const urlsWithClicks = await urlService.getUrlsWithClickCounts(user.id);
+      setUserUrls(urlsWithClicks);
     } catch (error) {
       console.error("Error fetching user URLs:", error);
     } finally {
       setIsLoadingUrls(false);
     }
-  }, [user, setUserUrls, setIsLoadingUrls]);
+  }, [user]);
 
   // Load user's URLs on component mount
   useEffect(() => {
@@ -70,7 +76,20 @@ const AuthenticatedView = () => {
     } else if (diffInSeconds < 86400) {
       return `${Math.floor(diffInSeconds / 3600)} hours ago`;
     } else {
-      return `${Math.floor(diffInSeconds / 86400)} days ago`;
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: "long",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      };
+      const formattedDate = date.toLocaleDateString("en-US", options);
+      const formattedTime = date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "numeric",
+      });
+      const formattedDateTime = `${formattedDate} at ${formattedTime}`;
+
+      return formattedDateTime;
     }
   };
 
@@ -91,7 +110,6 @@ const AuthenticatedView = () => {
           customCodeEnabled={true}
           onUrlShortened={fetchUserUrls}
           className="mb-6"
-          title="Create a new short URL"
         />
 
         {/* User's URLs */}
@@ -148,7 +166,7 @@ const AuthenticatedView = () => {
                       <Clock className="h-3 w-3 mr-1" />
                       {formatRelativeTime(urlItem.createdAt)}
                       <span className="mx-2">•</span>
-                      <span>{urlItem.click_count} clicks</span>
+                      <span>{urlItem.clickCount || 0} clicks</span>
                     </div>
                   </div>
                 </div>

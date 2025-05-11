@@ -6,7 +6,17 @@ export interface ShortenedUrl {
   original_url: string;
   short_code: string;
   user_id?: string | null;
-  click_count: number;
+  expires_at?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UrlClick {
+  id: string;
+  shortened_url_id: string;
+  clicked_at: Date;
+  user_agent?: string | null;
+  ip_address?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,6 +25,7 @@ export interface CreateShortenedUrlInput {
   original_url: string;
   user_id?: string;
   custom_code?: string;
+  expires_in_days?: number;
 }
 
 const TABLE_NAME = "shortened_urls";
@@ -24,7 +35,7 @@ const TABLE_NAME = "shortened_urls";
  * @param length Length of the short code
  * @returns Random alphanumeric string
  */
-export function generateShortCode(length: number = 6): string {
+export function generateShortCode(length: number = 8): string {
   return randomBytes(Math.ceil((length * 3) / 4))
     .toString("base64")
     .replace(/[+/]/g, "")
@@ -54,16 +65,39 @@ export async function createShortenedUrl(
     }
   }
 
+  // Calculate expiration date if expires_in_days is provided
+  let expires_at = null;
+  if (input.expires_in_days && input.expires_in_days > 0) {
+    expires_at = new Date();
+    expires_at.setDate(expires_at.getDate() + input.expires_in_days);
+  }
+
   const [shortenedUrl] = await db(TABLE_NAME)
     .insert({
       original_url: input.original_url,
       short_code,
       user_id: input.user_id || null,
-      click_count: 0,
+      expires_at,
     })
     .returning("*");
 
   return shortenedUrl;
+}
+
+/**
+ * Check if a URL has expired
+ * @param url The shortened URL to check
+ * @returns True if the URL has expired, false otherwise
+ */
+export function isUrlExpired(url: ShortenedUrl): boolean {
+  if (!url.expires_at) {
+    return false; // No expiration date means it never expires
+  }
+
+  const expiryDate = new Date(url.expires_at);
+  const now = new Date();
+
+  return now > expiryDate;
 }
 
 /**
@@ -92,10 +126,59 @@ export async function getShortenedUrlsByUser(
 }
 
 /**
- * Increment the click count for a shortened URL
+ * Log a click for a shortened URL
  */
-export async function incrementClickCount(short_code: string): Promise<void> {
-  await db(TABLE_NAME).where({ short_code }).increment("click_count", 1);
+export async function logUrlClick(
+  shortened_url_id: string,
+  user_agent?: string,
+  ip_address?: string
+): Promise<void> {
+  await db("url_clicks").insert({
+    shortened_url_id,
+    user_agent,
+    ip_address,
+  });
+}
+
+/**
+ * Get the click count for a shortened URL
+ */
+export async function getUrlClickCount(
+  shortened_url_id: string
+): Promise<number> {
+  const result = await db("url_clicks")
+    .count("id as count")
+    .where({ shortened_url_id })
+    .first();
+
+  return parseInt(result?.count as string) || 0;
+}
+
+/**
+ * Get the click count for a shortened URL by short code
+ */
+export async function getUrlClickCountByCode(
+  short_code: string
+): Promise<number> {
+  const url = await getShortenedUrlByCode(short_code);
+  if (!url) {
+    return 0;
+  }
+
+  return getUrlClickCount(url.id);
+}
+
+/**
+ * Get recent clicks for a shortened URL
+ */
+export async function getRecentUrlClicks(
+  shortened_url_id: string,
+  limit: number = 10
+): Promise<UrlClick[]> {
+  return db("url_clicks")
+    .where({ shortened_url_id })
+    .orderBy("clicked_at", "desc")
+    .limit(limit);
 }
 
 /**

@@ -17,7 +17,7 @@ const UrlShortener = ({
   customCodeEnabled = false,
   onUrlShortened,
   className = "",
-  title = "Create a new short URL",
+  title = "let's make your URL it shorter",
 }: UrlShortenerProps) => {
   const [url, setUrl] = useState("");
   const [customCode, setCustomCode] = useState("");
@@ -25,6 +25,7 @@ const UrlShortener = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [error, setError] = useState("");
+  const [expirationDays, setExpirationDays] = useState<number | "">("");
 
   // Reset the copied state after 2 seconds
   useEffect(() => {
@@ -52,7 +53,8 @@ const UrlShortener = ({
 
   // Validate custom code
   const isValidCustomCode = (code: string): boolean => {
-    return CUSTOM_CODE_REGEX.test(code);
+    // Check if code matches regex and has at least 3 characters
+    return CUSTOM_CODE_REGEX.test(code) && code.length >= 3;
   };
 
   // Handle custom code input change
@@ -61,7 +63,11 @@ const UrlShortener = ({
 
     // Validate the custom code as it's being typed
     if (inputCode && !isValidCustomCode(inputCode)) {
-      setError("Custom code can only contain letters and numbers.");
+      if (!CUSTOM_CODE_REGEX.test(inputCode)) {
+        setError("Custom code can only contain letters and numbers.");
+      } else {
+        setError("Custom code must be at least 3 characters long.");
+      }
     } else {
       // Clear error when input is valid or empty
       if (error) {
@@ -70,6 +76,17 @@ const UrlShortener = ({
     }
 
     setCustomCode(inputCode);
+  };
+
+  // Handle expiration days input change
+  const handleExpirationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setExpirationDays(value === "" ? "" : parseInt(value, 10));
+
+    // Clear error when input changes
+    if (error) {
+      setError("");
+    }
   };
 
   // Function to handle URL shortening via API
@@ -84,7 +101,11 @@ const UrlShortener = ({
 
     // Validate custom code if provided
     if (customCodeEnabled && customCode && !isValidCustomCode(customCode)) {
-      setError("Custom code can only contain letters and numbers");
+      if (!CUSTOM_CODE_REGEX.test(customCode)) {
+        setError("Custom code can only contain letters and numbers");
+      } else {
+        setError("Custom code must be at least 3 characters long");
+      }
       return;
     }
 
@@ -103,6 +124,8 @@ const UrlShortener = ({
         original_url: urlToShorten,
         user_id: userId,
         custom_code: customCodeEnabled && customCode ? customCode : undefined,
+        expires_in_days:
+          typeof expirationDays === "number" ? expirationDays : undefined,
       });
 
       // Get the full shortened URL with domain
@@ -136,6 +159,7 @@ const UrlShortener = ({
     setCustomCode("");
     setShortenedUrl("");
     setError("");
+    setExpirationDays("");
   };
 
   // Function to copy the shortened URL to clipboard
@@ -163,7 +187,7 @@ const UrlShortener = ({
           htmlFor="url"
           className="block text-sm font-medium text-gray-700 mb-2"
         >
-          URL to shorten
+          Paste it here
         </label>
         <div className="relative">
           <input
@@ -207,16 +231,42 @@ const UrlShortener = ({
               id="customCode"
               value={customCode}
               onChange={handleCustomCodeChange}
-              placeholder="e.g., myLink, thisLink2025"
+              placeholder="e.g., myLink, shortURL123"
               className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
           <p className="mt-4 text-xs text-gray-500">
             Leave empty to generate a random code. Only letters and numbers are
-            allowed.
+            allowed. Custom codes must be at least 3 characters long.
           </p>
         </div>
       )}
+
+      <div className="mb-4">
+        <label
+          htmlFor="expiration"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
+          Link expiration (optional)
+        </label>
+        <select
+          id="expiration"
+          value={expirationDays === "" ? "" : expirationDays.toString()}
+          onChange={handleExpirationChange}
+          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+        >
+          <option value="">Never expires</option>
+          <option value="1">1 day</option>
+          <option value="7">7 days</option>
+          <option value="30">30 days</option>
+          <option value="90">90 days</option>
+          <option value="365">1 year</option>
+        </select>
+        <p className="mt-1 text-xs text-gray-500">
+          Select how long this link should be active. After expiration, the link
+          will no longer work.
+        </p>
+      </div>
 
       {error && (
         <p className="mb-4 text-red-500 text-sm flex items-center">
@@ -269,6 +319,15 @@ const UrlShortener = ({
               )}
             </button>
           </div>
+          {expirationDays && (
+            <div className="px-3 pb-3 text-xs text-gray-500 flex items-center">
+              <span className="flex items-center">
+                <span className="mr-1">⏱️</span>
+                Expires in{" "}
+                {expirationDays === 1 ? "1 day" : `${expirationDays} days`}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>

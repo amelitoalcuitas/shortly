@@ -32,7 +32,7 @@ app.get("/", async (_req, res) => {
   res.send(`
     <html>
       <head>
-        <title>Shortly - URL Shortener</title>
+        <title>shortly - URL shortener</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -77,7 +77,7 @@ app.get("/", async (_req, res) => {
       <body>
         <div class="container">
           <h1>Shortly</h1>
-          <p>Welcome to Shortly, a simple URL shortener service.</p>
+          <p>Welcome to shortly, a simple URL shortener service.</p>
           <p>This is the API server. To use the URL shortener, please visit the client application.</p>
           <div>
             <a href="${

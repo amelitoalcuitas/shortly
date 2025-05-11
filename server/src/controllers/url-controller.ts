@@ -4,8 +4,11 @@ import {
   getShortenedUrlByCode,
   getAllShortenedUrls,
   getShortenedUrlsByUser,
-  incrementClickCount,
+  logUrlClick,
+  getUrlClickCount,
+  getUrlClickCountByCode,
   deleteShortenedUrl,
+  isUrlExpired,
 } from "../models/shortened-url";
 
 /**
@@ -13,7 +16,7 @@ import {
  */
 export async function createUrl(req: Request, res: Response) {
   try {
-    const { original_url, user_id, custom_code } = req.body;
+    const { original_url, user_id, custom_code, expires_in_days } = req.body;
 
     if (!original_url) {
       return res.status(400).json({
@@ -30,11 +33,35 @@ export async function createUrl(req: Request, res: Response) {
       });
     }
 
+    // Validate expiration days if provided
+    if (expires_in_days !== undefined) {
+      const expiresInDays = Number(expires_in_days);
+
+      if (isNaN(expiresInDays)) {
+        return res.status(400).json({
+          error: "Expiration days must be a number",
+        });
+      }
+
+      if (expiresInDays < 0) {
+        return res.status(400).json({
+          error: "Expiration days cannot be negative",
+        });
+      }
+
+      if (expiresInDays > 365) {
+        return res.status(400).json({
+          error: "Expiration days cannot exceed 365 days (1 year)",
+        });
+      }
+    }
+
     // Create the shortened URL
     const shortenedUrl = await createShortenedUrl({
       original_url,
       user_id,
       custom_code,
+      expires_in_days: expires_in_days ? Number(expires_in_days) : undefined,
     });
 
     return res.status(201).json({ url: shortenedUrl });
@@ -65,6 +92,15 @@ export async function getUrlByCode(req: Request, res: Response) {
     if (!url) {
       return res.status(404).json({
         error: "Shortened URL not found",
+      });
+    }
+
+    // Check if the URL has expired
+    if (isUrlExpired(url)) {
+      return res.status(410).json({
+        error: "Shortened URL has expired",
+        expired: true,
+        url,
       });
     }
 
@@ -150,8 +186,69 @@ export async function redirectToUrl(req: Request, res: Response) {
       `);
     }
 
-    // Increment the click count
-    await incrementClickCount(code);
+    // Check if the URL has expired
+    if (isUrlExpired(url)) {
+      return res.status(410).send(`
+        <html>
+          <head>
+            <title>URL Expired</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background-color: #f5f5f5;
+              }
+              .container {
+                text-align: center;
+                padding: 2rem;
+                background-color: white;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                max-width: 500px;
+              }
+              h1 {
+                color: #ff0054;
+                margin-bottom: 1rem;
+              }
+              p {
+                color: #333;
+                margin-bottom: 1.5rem;
+              }
+              a {
+                display: inline-block;
+                background-color: #ff0054;
+                color: white;
+                padding: 0.5rem 1rem;
+                text-decoration: none;
+                border-radius: 4px;
+                font-weight: bold;
+              }
+              a:hover {
+                opacity: 0.9;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>URL Expired</h1>
+              <p>This shortened URL has expired and is no longer available.</p>
+              <a href="/">Go to Homepage</a>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+
+    // Log the URL click with user agent and IP address
+    await logUrlClick(
+      url.id,
+      req.headers["user-agent"] || undefined,
+      req.ip || undefined
+    );
 
     // Redirect to the original URL
     return res.redirect(url.original_url);
@@ -195,7 +292,7 @@ export async function getUrlsByUser(req: Request, res: Response) {
 }
 
 /**
- * Increment the click count for a shortened URL
+ * Log a click for a shortened URL
  */
 export async function incrementUrlClickCount(req: Request, res: Response) {
   try {
@@ -210,14 +307,49 @@ export async function incrementUrlClickCount(req: Request, res: Response) {
       });
     }
 
-    // Increment the click count
-    await incrementClickCount(code);
+    // Log the URL click
+    await logUrlClick(
+      url.id,
+      req.headers["user-agent"] || undefined,
+      req.ip || undefined
+    );
 
-    return res.status(200).json({ success: true });
+    // Get the updated click count
+    const clickCount = await getUrlClickCount(url.id);
+
+    return res.status(200).json({ success: true, clickCount });
   } catch (error) {
-    console.error("Error incrementing click count:", error);
+    console.error("Error logging URL click:", error);
     return res.status(500).json({
-      error: "Failed to increment click count",
+      error: "Failed to log URL click",
+    });
+  }
+}
+
+/**
+ * Get click count for a shortened URL without incrementing it
+ */
+export async function getUrlClickCountEndpoint(req: Request, res: Response) {
+  try {
+    const { code } = req.params;
+
+    // Check if the URL exists
+    const url = await getShortenedUrlByCode(code);
+
+    if (!url) {
+      return res.status(404).json({
+        error: "Shortened URL not found",
+      });
+    }
+
+    // Get the click count without incrementing
+    const clickCount = await getUrlClickCountByCode(code);
+
+    return res.status(200).json({ success: true, clickCount });
+  } catch (error) {
+    console.error("Error getting URL click count:", error);
+    return res.status(500).json({
+      error: "Failed to get URL click count",
     });
   }
 }

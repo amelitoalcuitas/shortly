@@ -4,6 +4,7 @@ import Footer from "../components/Footer";
 import { useAuth } from "../hooks/useAuth";
 import { SpinnerGap, Warning } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
+import { isValidEmail } from "../utils/validation";
 
 const LoginPage: React.FC = () => {
   const { login, isAuthenticated } = useAuth();
@@ -25,6 +26,12 @@ const LoginPage: React.FC = () => {
 
     if (!email || !password) {
       setError("Please enter both email and password");
+      return;
+    }
+
+    // Validate email format
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid email address");
       return;
     }
 

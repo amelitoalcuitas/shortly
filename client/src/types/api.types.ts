@@ -6,7 +6,20 @@ export interface ShortenedUrl {
   original_url: string;
   short_code: string;
   user_id?: string | null;
-  click_count: number;
+  expires_at?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Interface for URL click data
+ */
+export interface UrlClick {
+  id: string;
+  shortened_url_id: string;
+  clicked_at: string;
+  user_agent?: string | null;
+  ip_address?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -18,6 +31,7 @@ export interface CreateUrlRequest {
   original_url: string;
   user_id?: string;
   custom_code?: string;
+  expires_in_days?: number;
 }
 
 /**
