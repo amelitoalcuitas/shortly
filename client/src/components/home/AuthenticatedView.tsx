@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Copy,
   SpinnerGap,
@@ -11,6 +11,8 @@ import {
   CaretUp,
   CaretLeft,
   CaretRight,
+  MagnifyingGlass,
+  X,
 } from "@phosphor-icons/react";
 import { urlService } from "../../services";
 import { useAuth } from "../../hooks/useAuth";
@@ -35,7 +37,7 @@ const AuthenticatedView = () => {
   const [pagination, setPagination] = useState<Pagination>({
     total: 0,
     page: 1,
-    pageSize: 10,
+    pageSize: 5,
     totalPages: 0,
   });
 
@@ -49,18 +51,26 @@ const AuthenticatedView = () => {
     }
   }, [copiedUrlId]);
 
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const skipNextDebounceRef = useRef(false);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
   // Fetch user's URLs and their click counts with pagination
   const fetchUserUrls = useCallback(
-    async (page = pagination.page) => {
+    async (page: number, search = debouncedSearchTerm) => {
       if (!user) return;
 
       setIsLoadingUrls(true);
       try {
-        // Use the paginated service method that fetches URLs with click counts
         const result = await urlService.getUrlsWithClickCountsPaginated(
           user.id,
           page,
-          pagination.pageSize
+          pagination.pageSize, // okay to keep pageSize as it's not expected to change often
+          search
         );
 
         setUserUrls(result.urls);
@@ -71,15 +81,30 @@ const AuthenticatedView = () => {
         setIsLoadingUrls(false);
       }
     },
-    [user, pagination.page, pagination.pageSize]
+    [user, pagination.pageSize, debouncedSearchTerm]
   );
 
-  // Load user's URLs on component mount
+  // Debounce logic
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      // Skip this debounce-triggered fetch if clear button already did it
+      if (skipNextDebounceRef.current) {
+        skipNextDebounceRef.current = false;
+        return;
+      }
+
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Trigger fetch only when debounced value updates
   useEffect(() => {
     if (user) {
-      fetchUserUrls();
+      fetchUserUrls(1);
     }
-  }, [user, fetchUserUrls]);
+  }, [debouncedSearchTerm, fetchUserUrls, user]);
 
   // Function to copy the shortened URL to clipboard
   const handleCopy = (urlToCopy: string, urlId: string) => {
@@ -225,20 +250,38 @@ const AuthenticatedView = () => {
 
         {/* User's URLs */}
         <div className="bg-white rounded-lg p-6 border border-gray-200">
-          <div className="mb-4">
+          <div className="flex justify-between items-center  mb-4">
             <h2 className="text-xl font-semibold text-gray-800">
               your shortlies
             </h2>
+
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <MagnifyingGlass className="w-4 h-4 text-gray-500" />
+              </div>
+              <input
+                type="text"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2"
+                placeholder="Search URLs..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
+              {searchTerm && (
+                <button
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  onClick={() => {
+                    skipNextDebounceRef.current = true;
+                    setSearchTerm("");
+                    fetchUserUrls(1, "");
+                  }}
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              )}
+            </div>
           </div>
 
-          {isLoadingUrls ? (
-            <div className="flex justify-center py-8">
-              <SpinnerGap
-                className="animate-spin h-8 w-8 text-primary"
-                weight="bold"
-              />
-            </div>
-          ) : userUrls.length === 0 ? (
+          {userUrls.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Link
                 className="h-12 w-12 mx-auto mb-2 text-gray-400"
@@ -247,7 +290,16 @@ const AuthenticatedView = () => {
               <p>You haven't created any shortened URLs yet</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="relative space-y-4">
+              {isLoadingUrls ? (
+                <div className="absolute inset-0 bg-white bg-opacity-70 flex justify-center items-center z-10">
+                  <SpinnerGap
+                    className="animate-spin h-8 w-8 text-primary"
+                    weight="bold"
+                  />
+                </div>
+              ) : null}
+
               {userUrls.map((urlItem) => (
                 <div
                   key={urlItem.id}

@@ -11,6 +11,7 @@ import {
   Legend,
   ChartData,
   ChartOptions,
+  Filler,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { urlService } from "../../services";
@@ -23,7 +24,8 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 );
 
 interface UrlAnalyticsChartProps {
