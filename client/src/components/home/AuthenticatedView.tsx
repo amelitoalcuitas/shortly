@@ -280,7 +280,10 @@ const AuthenticatedView = () => {
                           {formatRelativeTime(urlItem.createdAt)}
                         </div>
                         <div className="flex items-center">
-                          <span>{urlItem.clickCount || 0} clicks</span>
+                          <span>
+                            {Number(urlItem.clickCount || 0)} click
+                            {Number(urlItem.clickCount) === 1 ? "" : "s"}
+                          </span>
                         </div>
                         <div
                           className={`flex items-center ${

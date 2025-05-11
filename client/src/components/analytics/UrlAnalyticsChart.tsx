@@ -10,6 +10,7 @@ import {
   Tooltip,
   Legend,
   ChartData,
+  ChartOptions,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { urlService } from "../../services";
@@ -76,7 +77,7 @@ const UrlAnalyticsChart = ({ urlId, shortCode }: UrlAnalyticsChartProps) => {
         datasets: [
           {
             label: "Clicks",
-            data: analyticsData.dailyClicks.map((item) => item.count),
+            data: analyticsData.dailyClicks.map((item) => Number(item.count)),
             borderColor: "#ff0054",
             backgroundColor: "rgba(255, 0, 84, 0.1)",
             borderWidth: 2,
@@ -90,7 +91,7 @@ const UrlAnalyticsChart = ({ urlId, shortCode }: UrlAnalyticsChartProps) => {
     : null;
 
   // Chart options
-  const chartOptions = {
+  const chartOptions: ChartOptions<"line"> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -111,6 +112,12 @@ const UrlAnalyticsChart = ({ urlId, shortCode }: UrlAnalyticsChartProps) => {
         },
         padding: 10,
         displayColors: false,
+        callbacks: {
+          label: (context) => {
+            const value = Number(context.raw);
+            return `${value} click${value === 1 ? "" : "s"}`;
+          },
+        },
       },
     },
     scales: {
@@ -121,6 +128,9 @@ const UrlAnalyticsChart = ({ urlId, shortCode }: UrlAnalyticsChartProps) => {
           font: {
             family: "Poppins",
           },
+          callback: function (value) {
+            return Number(value);
+          }, // Remove leading zeros
         },
         grid: {
           color: "rgba(0, 0, 0, 0.05)",
@@ -153,7 +163,8 @@ const UrlAnalyticsChart = ({ urlId, shortCode }: UrlAnalyticsChartProps) => {
           </h3>
           {!isLoading && !error && (
             <p className="text-xs text-gray-500">
-              {totalClicks} clicks in the last {days} days
+              {Number(totalClicks)} click{Number(totalClicks) === 1 ? "" : "s"}{" "}
+              in the last {days} days
             </p>
           )}
         </div>
