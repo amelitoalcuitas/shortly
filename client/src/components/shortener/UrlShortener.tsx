@@ -249,19 +249,30 @@ const UrlShortener = ({
         >
           Link expiration (optional)
         </label>
-        <select
-          id="expiration"
-          value={expirationDays === "" ? "" : expirationDays.toString()}
-          onChange={handleExpirationChange}
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-        >
-          <option value="">Never expires</option>
-          <option value="1">1 day</option>
-          <option value="7">7 days</option>
-          <option value="30">30 days</option>
-          <option value="90">90 days</option>
-          <option value="365">1 year</option>
-        </select>
+        <div className="relative">
+          <select
+            id="expiration"
+            value={expirationDays === "" ? "" : expirationDays.toString()}
+            onChange={handleExpirationChange}
+            className="w-full p-3 pr-10 appearance-none border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          >
+            <option value="">Never expires</option>
+            <option value="1">1 day</option>
+            <option value="7">7 days</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+            <option value="365">1 year</option>
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
+            <svg
+              className="fill-current h-4 w-4"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+            >
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+            </svg>
+          </div>
+        </div>
         <p className="mt-1 text-xs text-gray-500">
           Select how long this link should be active. After expiration, the link
           will no longer work.

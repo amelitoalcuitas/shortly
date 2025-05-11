@@ -115,6 +115,13 @@ export async function getUrlByCode(req: Request, res: Response) {
 
 /**
  * Redirect to the original URL and increment click count
+ *
+ * Supports UTM parameters and other query parameters:
+ * - Any query parameters in the request URL will be appended to the original URL
+ * - If the original URL already has query parameters, the new ones will be added
+ * - UTM parameters (utm_source, utm_medium, utm_campaign, etc.) are commonly used for tracking
+ *
+ * Example: /{code}?utm_source=newsletter&utm_medium=email&utm_campaign=summer_sale
  */
 export async function redirectToUrl(req: Request, res: Response) {
   try {
@@ -250,8 +257,44 @@ export async function redirectToUrl(req: Request, res: Response) {
       req.ip || undefined
     );
 
-    // Redirect to the original URL
-    return res.redirect(url.original_url);
+    // Get the original URL
+    let targetUrl = url.original_url;
+
+    // Check if there are query parameters in the request
+    const queryParams = req.query;
+
+    if (Object.keys(queryParams).length > 0) {
+      try {
+        // Parse the original URL
+        const originalUrl = new URL(targetUrl);
+        const originalSearchParams = new URLSearchParams(originalUrl.search);
+
+        // Add all query parameters from the request to the original URL
+        Object.entries(queryParams).forEach(([key, value]) => {
+          if (typeof value === "string") {
+            originalSearchParams.append(key, value);
+          } else if (Array.isArray(value)) {
+            value.forEach((v) => {
+              if (typeof v === "string") {
+                originalSearchParams.append(key, v);
+              }
+            });
+          }
+        });
+
+        // Update the search part of the URL
+        originalUrl.search = originalSearchParams.toString();
+
+        // Get the final URL with parameters
+        targetUrl = originalUrl.toString();
+      } catch (error) {
+        console.error("Error appending UTM parameters:", error);
+        // If there's an error parsing the URL, fall back to the original URL
+      }
+    }
+
+    // Redirect to the target URL with parameters
+    return res.redirect(targetUrl);
   } catch (error) {
     console.error("Error redirecting to URL:", error);
     return res.status(500).json({

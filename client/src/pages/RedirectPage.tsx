@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useLocation } from "react-router";
 import { SpinnerGap, Warning } from "@phosphor-icons/react";
 
 /**
  * RedirectPage component
  * Handles redirecting users to the original URL when they visit a shortened URL
+ * Supports passing UTM parameters and other query parameters from the current URL to the target URL
+ *
+ * Example usage with UTM parameters:
+ * /{short-code}?utm_source=newsletter&utm_medium=email&utm_campaign=summer_sale
+ *
+ * These parameters will be appended to the original URL when redirecting
  */
 const RedirectPage = () => {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,18 +27,34 @@ const RedirectPage = () => {
         return;
       }
 
+      // Get the current query parameters
+      const queryParams = new URLSearchParams(location.search);
+
+      // Extract UTM parameters and other query parameters
+      const utmParams = new URLSearchParams();
+      queryParams.forEach((value, key) => {
+        // Add all parameters to be passed to the backend
+        utmParams.append(key, value);
+      });
+
+      // Create the redirect URL with query parameters
+      const redirectUrl = `${import.meta.env.VITE_API_URL}/${code}${
+        utmParams.toString() ? `?${utmParams.toString()}` : ""
+      }`;
+
       // Redirect directly to the backend which will:
       // 1. Check if the URL exists
       // 2. Increment the click count if it does
-      // 3. Redirect to the original URL or show an error
-      window.location.href = `${import.meta.env.VITE_API_URL}/${code}`;
+      // 3. Redirect to the original URL with UTM parameters
+      // 4. Show an error if the URL doesn't exist
+      window.location.href = redirectUrl;
 
       // Note: We don't need to handle errors here since the backend will handle them
       // and show an appropriate error page if the URL doesn't exist
     };
 
     fetchAndRedirect();
-  }, [code, navigate]);
+  }, [code, location.search, navigate]);
 
   // If there's an error, show an error page
   if (error) {
