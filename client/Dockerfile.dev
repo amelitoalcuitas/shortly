@@ -8,10 +8,16 @@ WORKDIR /app
 COPY package.json ./
 COPY package-lock.json ./
 
-# Install 
+# Install dependencies
 RUN npm install --ignore-scripts
+
+# Create a .vite cache directory and set permissions
+RUN mkdir -p node_modules/.vite && chmod -R 777 node_modules/.vite
 
 # Copy all files 
 COPY . .
 
-CMD ["npm", "run" , "dev"]
+# Expose the port
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
