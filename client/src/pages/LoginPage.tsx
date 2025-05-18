@@ -1,53 +1,53 @@
-import React, { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { useAuth } from "../hooks/useAuth";
-import { SpinnerGap, Warning } from "@phosphor-icons/react";
-import { useNavigate } from "react-router";
-import { isValidEmail } from "../utils/validation";
+import React, { useState } from "react"
+import Navbar from "../components/Navbar"
+import Footer from "../components/Footer"
+import { useAuth } from "../hooks/useAuth"
+import { SpinnerGap, Warning } from "@phosphor-icons/react"
+import { useNavigate } from "react-router"
+import { isValidEmail } from "../utils/validation"
 
 const LoginPage: React.FC = () => {
-  const { login, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { login, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
   // Redirect to home if already authenticated
   React.useEffect(() => {
     if (isAuthenticated) {
-      navigate("/");
+      navigate("/")
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!email || !password) {
-      setError("Please enter both email and password");
-      return;
+      setError("Please enter both email and password")
+      return
     }
 
     // Validate email format
     if (!isValidEmail(email)) {
-      setError("Please enter a valid email address");
-      return;
+      setError("Please enter a valid email address")
+      return
     }
 
-    setIsLoading(true);
-    setError("");
+    setIsLoading(true)
+    setError("")
 
     try {
-      await login(email, password);
-      navigate("/");
+      await login(email, password)
+      navigate("/")
     } catch (err) {
-      console.error("Login error:", err);
-      setError("Invalid email or password");
+      console.error("Login error:", err)
+      setError("Invalid email or password")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -70,7 +70,7 @@ const LoginPage: React.FC = () => {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2 flex items-center"
+                className="text-sm font-medium text-gray-700 mb-2 flex items-center"
               >
                 Email
               </label>
@@ -87,7 +87,7 @@ const LoginPage: React.FC = () => {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2 flex items-center"
+                className="text-sm font-medium text-gray-700 mb-2 flex items-center"
               >
                 Password
               </label>
@@ -139,7 +139,7 @@ const LoginPage: React.FC = () => {
 
       <Footer />
     </div>
-  );
-};
+  )
+}
 
-export default LoginPage;
+export default LoginPage
