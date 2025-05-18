@@ -52,7 +52,7 @@ export async function createShortenedUrl(
   const short_code = input.custom_code || generateShortCode()
 
   // Check if the short code already exists
-  const existingUrl = await db(TABLE_NAME).where({ short_code })
+  const existingUrl = await db(TABLE_NAME).where({ short_code }).first()
 
   if (existingUrl) {
     if (input.custom_code) {
