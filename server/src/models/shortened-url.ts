@@ -1,35 +1,35 @@
-import { db } from "../db/knex";
-import { randomBytes } from "crypto";
-import redisService from "../services/redis.service";
+import { db } from "../db/knex"
+import { randomBytes } from "crypto"
+import redisService from "../services/redis.service"
 
 export interface ShortenedUrl {
-  id: string;
-  original_url: string;
-  short_code: string;
-  user_id?: string | null;
-  expires_at?: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  original_url: string
+  short_code: string
+  user_id?: string | null
+  expires_at?: Date | null
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface UrlClick {
-  id: string;
-  shortened_url_id: string;
-  clicked_at: Date;
-  user_agent?: string | null;
-  ip_address?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  shortened_url_id: string
+  clicked_at: Date
+  user_agent?: string | null
+  ip_address?: string | null
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface CreateShortenedUrlInput {
-  original_url: string;
-  user_id?: string;
-  custom_code?: string;
-  expires_in_days?: number;
+  original_url: string
+  user_id?: string
+  custom_code?: string
+  expires_in_days?: number
 }
 
-const TABLE_NAME = "shortened_urls";
+const TABLE_NAME = "shortened_urls"
 
 /**
  * Generate a random short code for URLs
@@ -40,7 +40,7 @@ export function generateShortCode(length: number = 8): string {
   return randomBytes(Math.ceil((length * 3) / 4))
     .toString("base64")
     .replace(/[+/]/g, "")
-    .slice(0, length);
+    .slice(0, length)
 }
 
 /**
@@ -49,28 +49,28 @@ export function generateShortCode(length: number = 8): string {
 export async function createShortenedUrl(
   input: CreateShortenedUrlInput
 ): Promise<ShortenedUrl> {
-  const short_code = input.custom_code || generateShortCode();
+  const short_code = input.custom_code || generateShortCode()
 
   // Check if the short code already exists
-  const existingUrl = await db(TABLE_NAME).where({ short_code }).first();
+  const existingUrl = await db(TABLE_NAME).where({ short_code })
 
   if (existingUrl) {
     if (input.custom_code) {
       // If custom code was provided and it already exists, throw an error
       throw new Error(
         `Custom code "${input.custom_code}" already exists. Please choose a different code.`
-      );
+      )
     } else {
       // If generated code already exists, generate a new one recursively
-      return createShortenedUrl(input);
+      return createShortenedUrl(input)
     }
   }
 
   // Calculate expiration date if expires_in_days is provided
-  let expires_at = null;
+  let expires_at = null
   if (input.expires_in_days && input.expires_in_days > 0) {
-    expires_at = new Date();
-    expires_at.setDate(expires_at.getDate() + input.expires_in_days);
+    expires_at = new Date()
+    expires_at.setDate(expires_at.getDate() + input.expires_in_days)
   }
 
   const [shortenedUrl] = await db(TABLE_NAME)
@@ -80,18 +80,18 @@ export async function createShortenedUrl(
       user_id: input.user_id || null,
       expires_at,
     })
-    .returning("*");
+    .returning("*")
 
   // Cache the newly created URL
   try {
-    const cacheKey = `url:${short_code}`;
-    await redisService.set(cacheKey, shortenedUrl);
+    const cacheKey = `url:${short_code}`
+    await redisService.set(cacheKey, shortenedUrl)
   } catch (error) {
     // If Redis caching fails, just log the error and continue
-    console.error(`Redis error in createShortenedUrl: ${error}`);
+    console.error(`Redis error in createShortenedUrl: ${error}`)
   }
 
-  return shortenedUrl;
+  return shortenedUrl
 }
 
 /**
@@ -101,13 +101,13 @@ export async function createShortenedUrl(
  */
 export function isUrlExpired(url: ShortenedUrl): boolean {
   if (!url.expires_at) {
-    return false; // No expiration date means it never expires
+    return false // No expiration date means it never expires
   }
 
-  const expiryDate = new Date(url.expires_at);
-  const now = new Date();
+  const expiryDate = new Date(url.expires_at)
+  const now = new Date()
 
-  return now > expiryDate;
+  return now > expiryDate
 }
 
 /**
@@ -118,31 +118,31 @@ export async function getShortenedUrlByCode(
   short_code: string
 ): Promise<ShortenedUrl | null> {
   // Generate a cache key for this short code
-  const cacheKey = `url:${short_code}`;
+  const cacheKey = `url:${short_code}`
 
   try {
     // Try to get the URL from Redis cache first
-    const cachedUrl = await redisService.get<ShortenedUrl>(cacheKey);
+    const cachedUrl = await redisService.get<ShortenedUrl>(cacheKey)
 
     if (cachedUrl) {
       // URL found in cache, return it
-      return cachedUrl;
+      return cachedUrl
     }
 
     // URL not in cache, get it from the database
-    const url = await db(TABLE_NAME).where({ short_code }).first();
+    const url = await db(TABLE_NAME).where({ short_code }).first()
 
     if (url) {
       // Store the URL in Redis cache for future requests
       // Cache for 1 hour by default (configured in REDIS_TTL env var)
-      await redisService.set(cacheKey, url);
+      await redisService.set(cacheKey, url)
     }
 
-    return url;
+    return url
   } catch (error) {
     // If there's an error with Redis, fall back to database
-    console.error(`Redis error in getShortenedUrlByCode: ${error}`);
-    return db(TABLE_NAME).where({ short_code }).first();
+    console.error(`Redis error in getShortenedUrlByCode: ${error}`)
+    return db(TABLE_NAME).where({ short_code }).first()
   }
 }
 
@@ -150,7 +150,7 @@ export async function getShortenedUrlByCode(
  * Get all shortened URLs
  */
 export async function getAllShortenedUrls(): Promise<ShortenedUrl[]> {
-  return db(TABLE_NAME).select("*").orderBy("createdAt", "desc");
+  return db(TABLE_NAME).select("*").orderBy("createdAt", "desc")
 }
 
 /**
@@ -160,7 +160,7 @@ export async function getAllShortenedUrls(): Promise<ShortenedUrl[]> {
 export async function getShortenedUrlsByUser(
   user_id: string
 ): Promise<ShortenedUrl[]> {
-  return db(TABLE_NAME).where({ user_id }).orderBy("createdAt", "desc");
+  return db(TABLE_NAME).where({ user_id }).orderBy("createdAt", "desc")
 }
 
 /**
@@ -177,35 +177,35 @@ export async function getShortenedUrlsByUserPaginated(
   pageSize: number = 10,
   search?: string
 ): Promise<{ data: ShortenedUrl[]; total: number }> {
-  const offset = (page - 1) * pageSize;
+  const offset = (page - 1) * pageSize
 
   // Build the base query
-  let query = db(TABLE_NAME).where({ user_id });
+  let query = db(TABLE_NAME).where({ user_id })
 
   // Add search functionality if a search term is provided
   if (search && search.trim()) {
-    const searchTerm = `%${search.trim()}%`;
+    const searchTerm = `%${search.trim()}%`
     query = query.andWhere(function () {
       this.where("original_url", "ILIKE", searchTerm).orWhere(
         "short_code",
         "ILIKE",
         searchTerm
-      );
-    });
+      )
+    })
   }
 
   // Get total count with the same filters
-  const [countResult] = await query.clone().count("id as count");
-  const total = parseInt(countResult.count as string);
+  const [countResult] = await query.clone().count("id as count")
+  const total = parseInt(countResult.count as string)
 
   // Get the paginated data
   const data = await query
     .select("*")
     .orderBy("createdAt", "desc")
     .limit(pageSize)
-    .offset(offset);
+    .offset(offset)
 
-  return { data, total };
+  return { data, total }
 }
 
 /**
@@ -219,16 +219,16 @@ export async function logUrlClick(
 ): Promise<void> {
   // First, increment the click count in Redis for real-time stats
   try {
-    const clickCountKey = `clicks:${shortened_url_id}`;
-    await redisService.increment(clickCountKey);
+    const clickCountKey = `clicks:${shortened_url_id}`
+    await redisService.increment(clickCountKey)
 
     // Set expiry on the counter if it's new (default TTL from env)
-    const exists = await redisService.exists(clickCountKey);
+    const exists = await redisService.exists(clickCountKey)
     if (!exists) {
-      await redisService.set(clickCountKey, 1);
+      await redisService.set(clickCountKey, 1)
     }
   } catch (error) {
-    console.error(`Redis error in logUrlClick: ${error}`);
+    console.error(`Redis error in logUrlClick: ${error}`)
     // Continue with database logging even if Redis fails
   }
 
@@ -237,7 +237,7 @@ export async function logUrlClick(
     shortened_url_id,
     user_agent,
     ip_address,
-  });
+  })
 }
 
 /**
@@ -249,36 +249,36 @@ export async function getUrlClickCount(
 ): Promise<number> {
   try {
     // Try to get the click count from Redis first
-    const clickCountKey = `clicks:${shortened_url_id}`;
-    const cachedCount = await redisService.get<number>(clickCountKey);
+    const clickCountKey = `clicks:${shortened_url_id}`
+    const cachedCount = await redisService.get<number>(clickCountKey)
 
     if (cachedCount !== null) {
       // Return the cached count if available
-      return cachedCount;
+      return cachedCount
     }
 
     // If not in cache, get from database
     const result = await db("url_clicks")
       .count("id as count")
       .where({ shortened_url_id })
-      .first();
+      .first()
 
-    const count = parseInt(result?.count as string) || 0;
+    const count = parseInt(result?.count as string) || 0
 
     // Cache the count for future requests
-    await redisService.set(clickCountKey, count);
+    await redisService.set(clickCountKey, count)
 
-    return count;
+    return count
   } catch (error) {
-    console.error(`Redis error in getUrlClickCount: ${error}`);
+    console.error(`Redis error in getUrlClickCount: ${error}`)
 
     // Fall back to database if Redis fails
     const result = await db("url_clicks")
       .count("id as count")
       .where({ shortened_url_id })
-      .first();
+      .first()
 
-    return parseInt(result?.count as string) || 0;
+    return parseInt(result?.count as string) || 0
   }
 }
 
@@ -288,12 +288,12 @@ export async function getUrlClickCount(
 export async function getUrlClickCountByCode(
   short_code: string
 ): Promise<number> {
-  const url = await getShortenedUrlByCode(short_code);
+  const url = await getShortenedUrlByCode(short_code)
   if (!url) {
-    return 0;
+    return 0
   }
 
-  return getUrlClickCount(url.id);
+  return getUrlClickCount(url.id)
 }
 
 /**
@@ -306,7 +306,7 @@ export async function getRecentUrlClicks(
   return db("url_clicks")
     .where({ shortened_url_id })
     .orderBy("clicked_at", "desc")
-    .limit(limit);
+    .limit(limit)
 }
 
 /**
@@ -314,28 +314,28 @@ export async function getRecentUrlClicks(
  */
 export async function deleteShortenedUrl(id: string): Promise<boolean> {
   // First, get the URL to find its short code for cache invalidation
-  const url = await db(TABLE_NAME).where({ id }).first();
+  const url = await db(TABLE_NAME).where({ id }).first()
 
   if (!url) {
-    return false;
+    return false
   }
 
   // Delete the URL from the database
-  const deleted = await db(TABLE_NAME).where({ id }).delete();
+  const deleted = await db(TABLE_NAME).where({ id }).delete()
 
   if (deleted > 0) {
     // If deletion was successful, also remove from cache
     try {
-      const cacheKey = `url:${url.short_code}`;
-      await redisService.del(cacheKey);
+      const cacheKey = `url:${url.short_code}`
+      await redisService.del(cacheKey)
     } catch (error) {
       // If Redis operation fails, just log the error
-      console.error(`Redis error in deleteShortenedUrl: ${error}`);
+      console.error(`Redis error in deleteShortenedUrl: ${error}`)
     }
-    return true;
+    return true
   }
 
-  return false;
+  return false
 }
 
 /**
@@ -345,18 +345,18 @@ export async function getAllShortenedUrlsPaginated(
   page: number = 1,
   pageSize: number = 20
 ): Promise<{ data: ShortenedUrl[]; total: number }> {
-  const offset = (page - 1) * pageSize;
+  const offset = (page - 1) * pageSize
 
-  const [countResult] = await db(TABLE_NAME).count("id as count");
-  const total = parseInt(countResult.count as string);
+  const [countResult] = await db(TABLE_NAME).count("id as count")
+  const total = parseInt(countResult.count as string)
 
   const data = await db(TABLE_NAME)
     .select("*")
     .orderBy("createdAt", "desc")
     .limit(pageSize)
-    .offset(offset);
+    .offset(offset)
 
-  return { data, total };
+  return { data, total }
 }
 
 /**
@@ -377,12 +377,12 @@ export async function getShortenedUrlsWithClickCounts(
     .leftJoin("url_clicks", `${TABLE_NAME}.id`, "url_clicks.shortened_url_id")
     .where({ [`${TABLE_NAME}.user_id`]: user_id })
     .groupBy(`${TABLE_NAME}.id`)
-    .orderBy(`${TABLE_NAME}.createdAt`, "desc");
+    .orderBy(`${TABLE_NAME}.createdAt`, "desc")
 
   return results.map((result) => ({
     ...result,
     clickCount: parseInt(result.clickCount as string) || 0,
-  }));
+  }))
 }
 
 /**
@@ -399,30 +399,30 @@ export async function getShortenedUrlsWithClickCountsPaginated(
   pageSize: number = 10,
   search?: string
 ): Promise<{
-  data: Array<ShortenedUrl & { clickCount: number }>;
-  total: number;
+  data: Array<ShortenedUrl & { clickCount: number }>
+  total: number
 }> {
-  const offset = (page - 1) * pageSize;
+  const offset = (page - 1) * pageSize
 
   // Build the base query
-  let baseQuery = db(TABLE_NAME).where({ [`${TABLE_NAME}.user_id`]: user_id });
+  let baseQuery = db(TABLE_NAME).where({ [`${TABLE_NAME}.user_id`]: user_id })
 
   // Add search functionality if a search term is provided
   if (search && search.trim()) {
-    const searchTerm = `%${search.trim()}%`;
+    const searchTerm = `%${search.trim()}%`
     baseQuery = baseQuery.andWhere(function () {
       this.where(`${TABLE_NAME}.original_url`, "ILIKE", searchTerm).orWhere(
         `${TABLE_NAME}.short_code`,
         "ILIKE",
         searchTerm
-      );
-    });
+      )
+    })
   }
 
   // Get total count with the same filters
-  const countQuery = baseQuery.clone();
-  const [countResult] = await countQuery.count(`${TABLE_NAME}.id as count`);
-  const total = parseInt(countResult.count as string);
+  const countQuery = baseQuery.clone()
+  const [countResult] = await countQuery.count(`${TABLE_NAME}.id as count`)
+  const total = parseInt(countResult.count as string)
 
   // Get the paginated data with click counts
   const results = await baseQuery
@@ -434,14 +434,14 @@ export async function getShortenedUrlsWithClickCountsPaginated(
     .groupBy(`${TABLE_NAME}.id`)
     .orderBy(`${TABLE_NAME}.createdAt`, "desc")
     .limit(pageSize)
-    .offset(offset);
+    .offset(offset)
 
   const data = results.map((result) => ({
     ...result,
     clickCount: parseInt(result.clickCount as string) || 0,
-  }));
+  }))
 
-  return { data, total };
+  return { data, total }
 }
 
 /**
@@ -455,9 +455,9 @@ export async function getDailyClickCounts(
   days: number = 7
 ): Promise<Array<{ date: string; count: number }>> {
   // Calculate the start date (n days ago)
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days + 1); // +1 to include today
-  startDate.setHours(0, 0, 0, 0); // Start of the day
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - days + 1) // +1 to include today
+  startDate.setHours(0, 0, 0, 0) // Start of the day
 
   // Get all dates in the range, even those with zero clicks
   const results = await db.raw(
@@ -480,9 +480,9 @@ export async function getDailyClickCounts(
     ORDER BY date_series.date ASC
   `,
     [startDate.toISOString(), shortened_url_id]
-  );
+  )
 
-  return results.rows;
+  return results.rows
 }
 
 /**
@@ -502,18 +502,18 @@ export async function getTopUrlsByClicks(
       db.raw('COALESCE(COUNT("url_clicks"."id"), 0) as "clickCount"'),
     ])
     .leftJoin("url_clicks", `${TABLE_NAME}.id`, "url_clicks.shortened_url_id")
-    .groupBy(`${TABLE_NAME}.id`);
+    .groupBy(`${TABLE_NAME}.id`)
 
   // Add user filter if userId is provided
   if (userId) {
-    query = query.where({ [`${TABLE_NAME}.user_id`]: userId });
+    query = query.where({ [`${TABLE_NAME}.user_id`]: userId })
   }
 
   // Get the top URLs by click count
-  const results = await query.orderBy("clickCount", "desc").limit(limit);
+  const results = await query.orderBy("clickCount", "desc").limit(limit)
 
   return results.map((result) => ({
     ...result,
     clickCount: parseInt(result.clickCount as string) || 0,
-  }));
+  }))
 }
