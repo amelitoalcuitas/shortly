@@ -51,93 +51,44 @@ export async function createShortenedUrl(
 ): Promise<ShortenedUrl> {
   const short_code = input.custom_code || generateShortCode()
 
-  // Check if a NON-EXPIRED URL with the short code already exists
-  const existingNonExpiredUrl = await db(TABLE_NAME)
-    .where({ short_code })
-    .andWhere(function () {
-      this.whereNull("expires_at").orWhere("expires_at", ">", new Date())
-    })
-    .first()
+  // Check if the short code already exists
+  const existingUrl = await db(TABLE_NAME).where({ short_code }).first()
 
-  if (existingNonExpiredUrl) {
+  if (existingUrl) {
     if (input.custom_code) {
-      // If custom code was provided and a non-expired URL with this code exists, throw an error
+      // If custom code was provided and it already exists, throw an error
       throw new Error(
-        `Custom code "${input.custom_code}" already exists and is still active. Please choose a different code.`
+        `Custom code "${input.custom_code}" already exists. Please choose a different code.`
       )
     } else {
-      // If generated code already exists and is non-expired, generate a new one recursively
-      console.warn(
-        `Generated short code "${short_code}" already exists and is active. Regenerating.`
-      )
-      return createShortenedUrl(input) // Recursive call with the same input, will generate a new code
+      // If generated code already exists, generate a new one recursively
+      return createShortenedUrl(input)
     }
   }
 
-  // If we reach here, either no URL exists with this code, or only expired URLs exist.
-  // We can proceed to create or update a URL with this short_code.
-
-  // Check if an EXPIRED URL exists with this short code
-  const existingExpiredUrl = await db(TABLE_NAME)
-    .where({ short_code })
-    .andWhere("expires_at", "<=", new Date()) // Check for expired URLs
-    .first()
-
-  let shortenedUrl
-
-  if (existingExpiredUrl) {
-    // If an expired URL exists with this code, update it with the new details
-    ;[shortenedUrl] = await db(TABLE_NAME)
-      .where({ id: existingExpiredUrl.id })
-      .update({
-        original_url: input.original_url,
-        user_id: input.user_id || null,
-        expires_at:
-          input.expires_in_days && input.expires_in_days > 0
-            ? new Date(Date.now() + input.expires_in_days * 24 * 60 * 60 * 1000) // Calculate new expiration date
-            : null,
-        updatedAt: new Date(), // Update the timestamp
-      })
-      .returning("*")
-
-    console.log(`Updated expired URL with short code "${short_code}"`)
-
-    // Invalidate the old cache entry for this short code
-    try {
-      const cacheKey = `url:${short_code}`
-      await redisService.del(cacheKey)
-    } catch (error) {
-      console.error(`Redis error invalidating cache for updated URL: ${error}`)
-    }
-  } else {
-    // No non-expired or expired URL exists with this code, insert a new one
-
-    // Calculate expiration date if expires_in_days is provided
-    let expires_at = null
-    if (input.expires_in_days && input.expires_in_days > 0) {
-      expires_at = new Date()
-      expires_at.setDate(expires_at.getDate() + input.expires_in_days)
-    }
-
-    ;[shortenedUrl] = await db(TABLE_NAME)
-      .insert({
-        original_url: input.original_url,
-        short_code,
-        user_id: input.user_id || null,
-        expires_at,
-      })
-      .returning("*")
-
-    console.log(`Created new URL with short code "${short_code}"`)
+  // Calculate expiration date if expires_in_days is provided
+  let expires_at = null
+  if (input.expires_in_days && input.expires_in_days > 0) {
+    expires_at = new Date()
+    expires_at.setDate(expires_at.getDate() + input.expires_in_days)
   }
 
-  // Cache the newly created/updated URL
+  const [shortenedUrl] = await db(TABLE_NAME)
+    .insert({
+      original_url: input.original_url,
+      short_code,
+      user_id: input.user_id || null,
+      expires_at,
+    })
+    .returning("*")
+
+  // Cache the newly created URL
   try {
     const cacheKey = `url:${short_code}`
     await redisService.set(cacheKey, shortenedUrl)
   } catch (error) {
     // If Redis caching fails, just log the error and continue
-    console.error(`Redis error caching new/updated URL: ${error}`)
+    console.error(`Redis error in createShortenedUrl: ${error}`)
   }
 
   return shortenedUrl
