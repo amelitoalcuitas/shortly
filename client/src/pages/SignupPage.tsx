@@ -1,82 +1,91 @@
-import React, { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { useAuth } from "../hooks/useAuth";
-import { SpinnerGap, Warning, Check } from "@phosphor-icons/react";
-import { useNavigate } from "react-router";
-import { isValidEmail } from "../utils/validation";
+import React, { useState, useEffect } from "react"
+import Navbar from "../components/Navbar"
+import Footer from "../components/Footer"
+import { useAuth } from "../hooks/useAuth"
+import { SpinnerGap, Warning, Check } from "@phosphor-icons/react"
+import { useNavigate } from "react-router"
+import { isValidEmail } from "../utils/validation"
+import { AxiosError } from "axios"
 
 const SignupPage: React.FC = () => {
-  const { isAuthenticated, signup } = useAuth();
-  const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const { isAuthenticated, signup } = useAuth()
+  const navigate = useNavigate()
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
 
   // Redirect to home if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/");
+      navigate("/")
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate])
 
   const validateForm = () => {
     // Check if required fields are filled
     if (!email || !password || !confirmPassword) {
-      setError("Please fill in all required fields");
-      return false;
+      setError("Please fill in all required fields")
+      return false
     }
 
     // Validate email format
     if (!isValidEmail(email)) {
-      setError("Please enter a valid email address");
-      return false;
+      setError("Please enter a valid email address")
+      return false
     }
 
     // Validate password strength
     if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
-      return false;
+      setError("Password must be at least 8 characters long")
+      return false
     }
 
     // Check if passwords match
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return false;
+      setError("Passwords do not match")
+      return false
     }
 
-    return true;
-  };
+    return true
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!validateForm()) {
-      return;
+      return
     }
 
-    setIsLoading(true);
-    setError("");
+    setIsLoading(true)
+    setError("")
 
     try {
-      await signup(email, password, name || undefined);
-      setSuccess(true);
+      await signup(email, password, name || undefined)
+      setSuccess(true)
 
       // Redirect to login page after a short delay
       setTimeout(() => {
-        navigate("/login");
-      }, 1500);
+        navigate("/login")
+      }, 1500)
     } catch (err: unknown) {
-      console.error("Signup error:", err);
-      setError("Failed to create account. Please try again.");
+      console.error("Signup error:", err)
+      if (err instanceof AxiosError) {
+        if (err.status === 409) {
+          setError("Email already in use")
+          return
+        }
+
+        return
+      }
+      setError("Failed to create account. Please try again.")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -106,7 +115,7 @@ const SignupPage: React.FC = () => {
             <div>
               <label
                 htmlFor="name"
-                className="block text-sm font-medium text-gray-700 mb-2 flex items-center"
+                className="text-sm font-medium text-gray-700 mb-2 flex items-center"
               >
                 Name (optional)
               </label>
@@ -123,7 +132,7 @@ const SignupPage: React.FC = () => {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2 flex items-center"
+                className="text-sm font-medium text-gray-700 mb-2 flex items-center"
               >
                 Email <span className="text-red-500 ml-1">*</span>
               </label>
@@ -141,7 +150,7 @@ const SignupPage: React.FC = () => {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2 flex items-center"
+                className="text-sm font-medium text-gray-700 mb-2 flex items-center"
               >
                 Password <span className="text-red-500 ml-1">*</span>
               </label>
@@ -162,7 +171,7 @@ const SignupPage: React.FC = () => {
             <div>
               <label
                 htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 mb-2 flex items-center"
+                className="text-sm font-medium text-gray-700 mb-2 flex items-center"
               >
                 Confirm Password <span className="text-red-500 ml-1">*</span>
               </label>
@@ -210,7 +219,7 @@ const SignupPage: React.FC = () => {
 
       <Footer />
     </div>
-  );
-};
+  )
+}
 
-export default SignupPage;
+export default SignupPage

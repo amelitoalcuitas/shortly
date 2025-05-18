@@ -1,14 +1,14 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import "./index.css";
-import { BrowserRouter, Route, Routes } from "react-router";
-import HomePage from "./pages/HomePage";
-import LoginPage from "./pages/LoginPage";
-import SignupPage from "./pages/SignupPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import RedirectPage from "./pages/RedirectPage";
-import { AuthProvider } from "./contexts/AuthContext.tsx";
+import { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
+import "./index.css"
+import { BrowserRouter, Route, Routes } from "react-router"
+import HomePage from "./pages/HomePage"
+import LoginPage from "./pages/LoginPage"
+import SignupPage from "./pages/SignupPage"
+import ForgotPasswordPage from "./pages/ForgotPasswordPage"
+import ResetPasswordPage from "./pages/ResetPasswordPage"
+import RedirectPage from "./pages/RedirectPage"
+import { AuthProvider } from "./contexts/AuthContext.tsx"
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -26,4 +26,4 @@ createRoot(document.getElementById("root")!).render(
       </BrowserRouter>
     </AuthProvider>
   </StrictMode>
-);
+)

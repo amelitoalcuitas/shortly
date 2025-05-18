@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
-import { Copy, SpinnerGap, Warning, X } from "@phosphor-icons/react";
-import { urlService } from "../../services";
-import { AxiosError } from "axios";
-import { isValidUrl, normalizeUrl, isSameAsHost } from "../../utils/validation";
+import { useState, useEffect } from "react"
+import { Copy, SpinnerGap, Warning, X } from "@phosphor-icons/react"
+import { urlService } from "../../services"
+import { AxiosError } from "axios"
+import { isValidUrl, normalizeUrl, isSameAsHost } from "../../utils/validation"
 
 interface UrlShortenerProps {
-  userId?: string;
-  customCodeEnabled?: boolean;
-  onUrlShortened?: (shortCode: string) => void;
-  className?: string;
-  title?: string;
+  userId?: string
+  customCodeEnabled?: boolean
+  onUrlShortened?: (shortCode: string) => void
+  className?: string
+  title?: string
 }
 
 const UrlShortener = ({
@@ -19,115 +19,115 @@ const UrlShortener = ({
   className = "",
   title = "let's make it shorter",
 }: UrlShortenerProps) => {
-  const [url, setUrl] = useState("");
-  const [customCode, setCustomCode] = useState("");
-  const [shortenedUrl, setShortenedUrl] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
-  const [error, setError] = useState("");
+  const [url, setUrl] = useState("")
+  const [customCode, setCustomCode] = useState("")
+  const [shortenedUrl, setShortenedUrl] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
+  const [error, setError] = useState("")
   // Default to 7 days for non-logged-in users
   const [expirationDays, setExpirationDays] = useState<number | "">(
     userId ? "" : 7
-  );
+  )
 
   // Reset the copied state after 2 seconds
   useEffect(() => {
     if (isCopied) {
       const timer = setTimeout(() => {
-        setIsCopied(false);
-      }, 2000);
-      return () => clearTimeout(timer);
+        setIsCopied(false)
+      }, 2000)
+      return () => clearTimeout(timer)
     }
-  }, [isCopied]);
+  }, [isCopied])
 
   // Handle URL input change
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputUrl = e.target.value;
-    setUrl(inputUrl);
+    const inputUrl = e.target.value
+    setUrl(inputUrl)
 
     // Clear error when input changes
     if (error) {
-      setError("");
+      setError("")
     }
-  };
+  }
 
   // Custom code validation regex - only allows alphanumeric characters
-  const CUSTOM_CODE_REGEX = /^[a-zA-Z0-9]*$/;
+  const CUSTOM_CODE_REGEX = /^[a-zA-Z0-9]*$/
 
   // Validate custom code
   const isValidCustomCode = (code: string): boolean => {
     // Check if code matches regex and has at least 3 characters
-    return CUSTOM_CODE_REGEX.test(code) && code.length >= 3;
-  };
+    return CUSTOM_CODE_REGEX.test(code) && code.length >= 3
+  }
 
   // Handle custom code input change
   const handleCustomCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputCode = e.target.value;
+    const inputCode = e.target.value
 
     // Validate the custom code as it's being typed
     if (inputCode && !isValidCustomCode(inputCode)) {
       if (!CUSTOM_CODE_REGEX.test(inputCode)) {
-        setError("Custom code can only contain letters and numbers.");
+        setError("Custom code can only contain letters and numbers.")
       } else {
-        setError("Custom code must be at least 3 characters long.");
+        setError("Custom code must be at least 3 characters long.")
       }
     } else {
       // Clear error when input is valid or empty
       if (error) {
-        setError("");
+        setError("")
       }
     }
 
-    setCustomCode(inputCode);
-  };
+    setCustomCode(inputCode)
+  }
 
   // Handle expiration days input change
   const handleExpirationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    setExpirationDays(value === "" ? "" : parseInt(value, 10));
+    const value = e.target.value
+    setExpirationDays(value === "" ? "" : parseInt(value, 10))
 
     // Clear error when input changes
     if (error) {
-      setError("");
+      setError("")
     }
-  };
+  }
 
   // Function to handle URL shortening via API
   const handleShorten = async () => {
-    if (!url.trim()) return;
+    if (!url.trim()) return
 
     // Validate URL before proceeding
     if (!isValidUrl(url)) {
-      setError("Please enter a valid URL");
-      return;
+      setError("Please enter a valid URL")
+      return
     }
 
     // Add protocol if missing using the normalizeUrl utility function
-    const urlToShorten = normalizeUrl(url);
+    const urlToShorten = normalizeUrl(url)
 
     // Check if the URL is the same as the host URL
-    const hostUrl = urlService.getBaseUrl();
+    const hostUrl = urlService.getBaseUrl()
     if (isSameAsHost(urlToShorten, hostUrl)) {
-      setError("You cannot shorten the URL of this site.");
-      return;
+      setError("You cannot shorten the URL of this site.")
+      return
     }
 
     // Validate custom code if provided
     if (customCodeEnabled && customCode && !isValidCustomCode(customCode)) {
       if (!CUSTOM_CODE_REGEX.test(customCode)) {
-        setError("Custom code can only contain letters and numbers");
+        setError("Custom code can only contain letters and numbers")
       } else {
-        setError("Custom code must be at least 3 characters long");
+        setError("Custom code must be at least 3 characters long")
       }
-      return;
+      return
     }
 
-    setError("");
-    setIsLoading(true);
-    setShortenedUrl("");
+    setError("")
+    setIsLoading(true)
+    setShortenedUrl("")
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate loading
+      await new Promise((resolve) => setTimeout(resolve, 500)) // Simulate loading
 
       // Call the URL service to create a shortened URL
       const result = await urlService.createUrl({
@@ -140,56 +140,54 @@ const UrlShortener = ({
             ? expirationDays
             : undefined
           : 7,
-      });
+      })
 
       // Get the full shortened URL with domain
-      const fullShortenedUrl = urlService.getFullShortenedUrl(
-        result.short_code
-      );
-      setShortenedUrl(fullShortenedUrl);
+      const fullShortenedUrl = urlService.getFullShortenedUrl(result.short_code)
+      setShortenedUrl(fullShortenedUrl)
 
       // Notify parent component if callback is provided
       if (onUrlShortened) {
-        onUrlShortened(result.short_code);
+        onUrlShortened(result.short_code)
       }
     } catch (err: unknown) {
-      console.error("Error shortening URL:", err);
+      console.error("Error shortening URL:", err)
 
       if (err instanceof AxiosError) {
         setError(
           err.response?.data?.error ||
             "Failed to shorten URL. Please try again."
-        );
-        return;
+        )
+        return
       }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   // Function to clear the URL input and shortened URL
   const handleClear = () => {
-    setUrl("");
-    setCustomCode("");
-    setShortenedUrl("");
-    setError("");
+    setUrl("")
+    setCustomCode("")
+    setShortenedUrl("")
+    setError("")
     // Reset expiration to default value based on login status
-    setExpirationDays(userId ? "" : 7);
-  };
+    setExpirationDays(userId ? "" : 7)
+  }
 
   // Function to copy the shortened URL to clipboard
   const handleCopy = (urlToCopy: string) => {
-    if (!urlToCopy) return;
+    if (!urlToCopy) return
 
     navigator.clipboard
       .writeText(urlToCopy)
       .then(() => {
-        setIsCopied(true);
+        setIsCopied(true)
       })
       .catch((err) => {
-        console.error("Failed to copy text: ", err);
-      });
-  };
+        console.error("Failed to copy text: ", err)
+      })
+  }
 
   return (
     <div
@@ -271,7 +269,7 @@ const UrlShortener = ({
                 id="expiration"
                 value={expirationDays === "" ? "" : expirationDays.toString()}
                 onChange={handleExpirationChange}
-                className="w-full p-3 pr-10 appearance-none border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full p-3 pr-10 appearance-none bg-transparent border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="">Never expires</option>
                 <option value="1">1 day</option>
@@ -377,7 +375,7 @@ const UrlShortener = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default UrlShortener;
+export default UrlShortener
