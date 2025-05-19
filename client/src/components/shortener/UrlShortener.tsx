@@ -345,9 +345,14 @@ const UrlShortener = ({
             Your shortened URL
           </div>
           <div className="p-3 flex items-center justify-between">
-            <div className="text-primary font-medium truncate mr-2">
+            <a
+              href={shortenedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary font-medium truncate mr-2 hover:underline"
+            >
               {shortenedUrl}
-            </div>
+            </a>
             <button
               onClick={() => handleCopy(shortenedUrl)}
               className="flex-shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md transition-colors text-sm font-medium"
